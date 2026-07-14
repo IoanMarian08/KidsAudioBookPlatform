@@ -1,199 +1,242 @@
 # Database Design
 
-Version: 1.0.0  
-Status: Draft for implementation  
+Version: 1.1.0  
+Status: Implementation specification  
 Owners: Backend Architecture, Data Engineering  
 Last reviewed: 2026-07-14
 
 ## 1. Purpose
 
-This document defines the persistence model for KidsAudioBookPlatform. It establishes the database boundaries, naming rules, entity relationships, lifecycle policies, integrity constraints, indexing strategy, migration approach, audit model, retention rules, and performance expectations used by the backend services.
+This document defines the persistence architecture for KidsAudioBookPlatform. It is the normative source for relational data ownership, schemas, tables, relationships, integrity constraints, indexes, auditability, migrations, retention, backup, recovery, and operational database practices.
 
-The design supports the first production release while preserving a controlled path toward independent microservice databases. It intentionally avoids premature distribution. The initial implementation uses PostgreSQL as the primary transactional database, Redis for ephemeral and cached data, and object storage for audio, images, and downloadable media assets.
+The first production stage uses:
 
-This document is normative. When implementation details conflict with it, the architecture must be reviewed and the decision recorded through an ADR before the database model is changed.
+- PostgreSQL as the authoritative transactional data store;
+- Redis for cache, rate-limit coordination, idempotency, and short-lived state;
+- S3-compatible object storage for audio, images, synchronized text artifacts, and offline packages.
 
-## 2. Design Goals
+The initial deployment may use one PostgreSQL cluster and one physical database, but bounded-context ownership must be preserved so that selected domains can later be extracted into independent services and databases.
 
-The persistence layer must provide:
+## 2. Database Design Principles
 
-- strong transactional consistency for accounts, subscriptions, content publication, entitlements, and purchases;
-- explicit ownership of every table by one bounded context;
-- safe support for multiple child profiles under one parent account;
-- durable storage of listening progress, favorites, downloads, and notification history;
-- traceability for administrative actions and content changes;
-- efficient content discovery by age, category, language, premium status, and publication state;
-- reliable asynchronous event publication through an outbox pattern;
-- privacy-aware data storage with minimal collection of child-related information;
-- predictable migrations and rollback procedures;
-- a future extraction path from a modular monolith to independent services.
+1. Every table has exactly one owning bounded context.
+2. Business correctness is protected by both application rules and database constraints.
+3. Child-related data is minimized by design.
+4. Binary media is never stored in PostgreSQL.
+5. Public identifiers are non-sequential UUIDs.
+6. Cross-context writes are forbidden.
+7. Schema evolution is performed only through versioned Flyway migrations.
+8. Destructive changes use expand-and-contract migrations.
+9. Audit records are append-only.
+10. Redis is never the sole source of business truth.
+11. Read optimization must not weaken ownership boundaries.
+12. Large append-only tables receive explicit retention and partitioning policies.
 
-The design must not rely on application code alone for data correctness. Important invariants are enforced by database constraints whenever PostgreSQL can express them safely.
-
-## 3. Persistence Technology
+## 3. Technology Baseline
 
 ### 3.1 PostgreSQL
 
-PostgreSQL is the source of truth for transactional and relational data. The supported production baseline is PostgreSQL 16 or newer.
+Production baseline: PostgreSQL 16 or newer.
 
-PostgreSQL is selected because it provides:
+Required capabilities:
 
-- mature transaction semantics;
-- reliable foreign keys and constraints;
-- partial, composite, covering, and expression indexes;
-- JSONB for carefully bounded metadata;
-- full-text search capabilities for the first product stage;
-- robust migration tooling;
-- row locking and concurrency controls;
-- strong operational support and observability.
+- ACID transactions;
+- foreign keys and check constraints;
+- partial, composite, expression, and covering indexes;
+- `jsonb` for bounded extensibility;
+- row-level locking and optimistic concurrency;
+- native full-text search for the initial stage;
+- logical backup and point-in-time recovery support;
+- declarative partitioning for high-volume event tables.
 
 ### 3.2 Redis
 
-Redis is not a system of record. It may store:
+Redis may contain only reconstructible or disposable data:
 
-- access-session metadata;
-- refresh-token families or revocation markers;
+- cache entries;
 - rate-limit counters;
-- short-lived verification challenges;
-- distributed locks with strict timeouts;
-- content response caches;
-- entitlement caches;
-- idempotency results;
-- temporary playback state awaiting persistence.
+- refresh-token revocation markers;
+- short-lived challenges;
+- idempotency outcomes;
+- distributed-lock leases;
+- temporary orchestration state.
 
-All Redis data must be reconstructible or safely disposable. Business records must never exist only in Redis.
+Redis keys must have a namespace and version:
+
+```text
+kabp:v1:catalog:story:{storyId}
+kabp:v1:entitlement:account:{accountId}
+kabp:v1:ratelimit:login:{identifierHash}
+kabp:v1:idempotency:{accountId}:{key}
+```
 
 ### 3.3 Object Storage
 
-Audio files, cover images, illustrations, waveform files, subtitles, and offline packages are stored in S3-compatible object storage. PostgreSQL stores only asset metadata and storage references.
+Object keys are opaque and contain no personal information.
 
-Object storage keys must be opaque and must not contain names, email addresses, child profile names, or other personal data.
+```text
+media/audio/{assetId}/{variant}.m4a
+media/images/{assetId}/{variant}.webp
+media/text/{assetId}/{locale}.json
+offline/packages/{manifestId}/{version}.zip
+```
 
-## 4. Database Ownership Model
+PostgreSQL stores metadata, checksums, processing state, and object references.
 
-The initial deployment may use one PostgreSQL cluster and one physical database, but ownership remains separated by schema.
+## 4. Schema Ownership
 
-Recommended schemas:
-
-| Schema | Owner bounded context | Primary responsibility |
+| Schema | Owning context | Main responsibility |
 |---|---|---|
-| `identity` | Identity & Access | Parent accounts, credentials, sessions, roles |
-| `profiles` | Child Profiles | Child profiles, preferences, parental settings |
-| `catalog` | Content Catalog | Stories, series, episodes, categories, assets |
-| `playback` | Playback | Progress, sessions, bookmarks, favorites |
-| `billing` | Subscription & Entitlements | Plans, subscriptions, purchases, entitlements |
-| `notifications` | Notifications | Messages, delivery attempts, preferences |
-| `admin` | Administration | Audit events, moderation, admin activity |
+| `identity` | Identity and Access | Accounts, credentials, sessions, roles |
+| `profiles` | Family and Profiles | Child profiles, preferences, parent controls |
+| `catalog` | Content Catalog | Stories, series, episodes, categories, collections |
+| `media` | Media | Assets, variants, processing, manifests |
+| `playback` | Listening and Progress | Sessions, progress, favorites, history |
+| `billing` | Subscription and Entitlements | Plans, subscriptions, purchases, entitlements |
+| `advertising` | Advertising Policy | Eligibility counters and ad decisions |
+| `notifications` | Notifications | Inbox, templates, preferences, delivery attempts |
+| `admin` | Administration and Audit | Admin identities, audit records, moderation |
 | `integration` | Platform Integration | Outbox, inbox, idempotency, scheduled jobs |
+| `analytics` | Analytics | Privacy-aware product events and aggregates |
 
-Rules:
+### 4.1 Ownership Rules
 
-1. A table has exactly one owning bounded context.
-2. Only the owning module may write to its tables.
-3. Cross-context reads occur through application interfaces, database views approved by architecture, or replicated read models.
-4. Direct cross-context updates are forbidden.
-5. Foreign keys across schemas are allowed in the modular-monolith phase only when they protect a critical invariant and do not block future extraction.
-6. Every cross-schema foreign key must be documented as an extraction dependency.
+- only the owning module may modify its tables;
+- another module must not import the owner's JPA repositories;
+- cross-context reads use application contracts, APIs, or approved read models;
+- cross-schema foreign keys are allowed only in the modular-monolith stage and must be documented as extraction dependencies;
+- new cross-schema foreign keys require architecture review;
+- reporting queries must use read replicas or reporting views when production load justifies it.
 
-## 5. General Conventions
+## 5. Naming and Type Conventions
 
-### 5.1 Names
+### 5.1 Naming
 
 - schemas, tables, columns, indexes, and constraints use `snake_case`;
-- table names are plural nouns;
-- primary key columns are named `id`;
-- foreign keys use `<entity>_id`;
-- timestamp columns end in `_at`;
-- date-only columns end in `_date`;
-- boolean columns use positive names such as `is_active` and `is_premium`;
-- monetary values use `amount_minor` plus `currency_code`;
-- index names use `idx_<table>__<columns>`;
-- unique constraints use `uq_<table>__<columns>`;
-- check constraints use `ck_<table>__<rule>`;
-- foreign keys use `fk_<table>__<referenced_table>`.
+- table names use plural nouns;
+- primary key column: `id`;
+- foreign key: `<entity>_id`;
+- timestamps end with `_at`;
+- date-only fields end with `_date`;
+- boolean columns use positive names such as `is_active`;
+- unique constraints: `uq_<table>__<columns>`;
+- indexes: `idx_<table>__<columns>`;
+- checks: `ck_<table>__<rule>`;
+- foreign keys: `fk_<table>__<target>`.
 
-### 5.2 Identifiers
+### 5.2 Standard Types
 
-Business entities use UUID version 7 where supported by the application runtime. UUIDv7 provides globally unique, time-ordered identifiers that index more efficiently than random UUIDv4 values.
+| Concept | PostgreSQL type |
+|---|---|
+| Public ID | `uuid` |
+| Timestamp | `timestamptz` |
+| Calendar date | `date` |
+| Local time | `time` |
+| Locale | `varchar(16)` |
+| Currency | `char(3)` |
+| Money | `bigint` minor units |
+| Duration | `integer` seconds or milliseconds, explicitly named |
+| Percentage/volume | `smallint` with check constraint |
+| Flexible metadata | bounded `jsonb` |
 
-Identifiers must be generated in the application or through a database function consistently. Sequential numeric identifiers may be used only for internal append-only tables where they are never exposed externally.
+Enums should normally be represented by constrained `varchar` values rather than PostgreSQL enum types because application releases and rollback procedures are easier to manage.
 
-Public API resources expose UUIDs. Database sequence values must not be exposed.
+### 5.3 IDs
 
-### 5.3 Timestamps
+Application-generated UUIDv7 is preferred. UUIDv4 is acceptable until the selected Java library supports UUIDv7 consistently.
 
-All timestamps use `timestamp with time zone` and are stored in UTC. The standard audit columns are:
+Sequential IDs may be used only for internal append-only tables that are never exposed externally.
+
+### 5.4 Audit Columns
+
+Mutable business tables use:
 
 ```sql
 created_at timestamptz not null default now(),
-updated_at timestamptz not null default now()
+created_by uuid null,
+updated_at timestamptz not null default now(),
+updated_by uuid null,
+version bigint not null default 0
 ```
 
-The application is responsible for updating `updated_at`. Database triggers may be used only if the team adopts them consistently for all mutable tables.
+`created_by` and `updated_by` may represent an account, administrator, or system process. The actor type must be available where ambiguity exists.
 
-### 5.4 Soft Deletion
+### 5.5 Optimistic Locking
 
-Soft deletion is not the default. It is permitted only when records must remain for restoration, audit, billing, or legal reasons.
+Aggregates edited concurrently use `version bigint not null default 0` and JPA `@Version`.
 
-Soft-deleted tables use:
+A stale update results in `409 Conflict`. The system must never silently overwrite newer content, profile settings, or administrative decisions.
+
+### 5.6 Soft Deletion
+
+Soft deletion is not the default. It is used only for recoverability, billing history, privacy workflows, or legal audit.
 
 ```sql
 deleted_at timestamptz null,
 deleted_by uuid null
 ```
 
-Queries must explicitly exclude deleted records. Unique indexes on soft-deleted tables should normally be partial:
+Active uniqueness uses partial indexes:
 
 ```sql
-create unique index uq_child_profiles__account_name_active
-    on profiles.child_profiles(account_id, lower(name))
+create unique index uq_accounts__email_active
+    on identity.accounts(email_normalized)
     where deleted_at is null;
 ```
 
-### 5.5 Optimistic Locking
+## 6. High-Level Entity Relationship Model
 
-Frequently edited aggregates include a numeric `version` column used for optimistic concurrency control.
+```mermaid
+erDiagram
+    ACCOUNTS ||--o{ AUTHENTICATION_METHODS : has
+    ACCOUNTS ||--o{ SESSIONS : opens
+    ACCOUNTS ||--o{ CHILD_PROFILES : owns
+    ACCOUNTS ||--o{ SUBSCRIPTIONS : purchases
+    ACCOUNTS ||--o{ NOTIFICATIONS : receives
+    CHILD_PROFILES ||--|| PROFILE_PREFERENCES : configures
+    CHILD_PROFILES ||--o{ PLAYBACK_PROGRESS : tracks
+    CHILD_PROFILES ||--o{ FAVORITES : saves
+    SERIES ||--o{ STORIES : contains
+    STORIES ||--o{ EPISODES : contains
+    STORIES }o--o{ CATEGORIES : classified_as
+    STORIES ||--o{ STORY_LOCALIZATIONS : translated_as
+    STORIES ||--o{ MEDIA_LINKS : references
+    MEDIA_ASSETS ||--o{ MEDIA_VARIANTS : provides
+    SUBSCRIPTIONS ||--o{ ENTITLEMENTS : grants
+    PLAYBACK_SESSIONS ||--o{ PROGRESS_EVENTS : records
+    OUTBOX_EVENTS }o--|| ACCOUNTS : initiated_by
+```
+
+## 7. Identity and Access Schema
+
+### 7.1 `identity.accounts`
+
+Represents the adult account holder. A child profile is never a login principal.
 
 ```sql
-version bigint not null default 0
+create table identity.accounts (
+    id uuid primary key,
+    email_normalized varchar(320) not null,
+    email_display varchar(320) not null,
+    status varchar(32) not null,
+    preferred_locale varchar(16) not null default 'ro-RO',
+    timezone_id varchar(64) not null default 'Europe/Bucharest',
+    email_verified_at timestamptz null,
+    terms_version varchar(32) not null,
+    terms_accepted_at timestamptz not null,
+    privacy_version varchar(32) not null,
+    privacy_accepted_at timestamptz not null,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+    deleted_at timestamptz null,
+    version bigint not null default 0,
+    constraint ck_accounts__status check (
+        status in ('PENDING_VERIFICATION','ACTIVE','LOCKED','SUSPENDED','DELETION_PENDING','DELETED')
+    )
+);
 ```
 
-JPA entities use `@Version`. A conflict returns HTTP `409 Conflict` and never silently overwrites a newer change.
-
-## 6. Identity and Access Model
-
-### 6.1 Parent Accounts
-
-`identity.accounts` represents the adult account owner. Children do not receive standalone login accounts in the MVP.
-
-Core columns:
-
-```text
-id
-email_normalized
-email_display
-password_hash
-status
-email_verified_at
-preferred_locale
-terms_version
-terms_accepted_at
-privacy_version
-privacy_accepted_at
-created_at
-updated_at
-deleted_at
-version
-```
-
-Constraints:
-
-- `email_normalized` is unique among active accounts;
-- `status` is one of `PENDING_VERIFICATION`, `ACTIVE`, `LOCKED`, `SUSPENDED`, `DELETION_PENDING`, `DELETED`;
-- password hashes are never logged or copied to audit payloads;
-- account deletion is a managed workflow rather than an immediate cascade.
-
-Suggested indexes:
+Indexes:
 
 ```sql
 create unique index uq_accounts__email_active
@@ -204,44 +247,27 @@ create index idx_accounts__status_created_at
     on identity.accounts(status, created_at desc);
 ```
 
-### 6.2 Credentials and Authentication Methods
+### 7.2 `identity.authentication_methods`
 
-Authentication methods are separated from the account record so password, Google, Apple, or future identity providers can coexist.
+Supports password, Apple, Google, and future identity providers.
 
-`identity.authentication_methods`:
+Important columns:
 
 ```text
-id
-account_id
-method_type
-provider_subject
-password_hash
-is_primary
-last_used_at
-created_at
-updated_at
+id, account_id, method_type, provider_subject, password_hash,
+is_primary, last_used_at, created_at, updated_at
 ```
 
-Only columns relevant to the selected method may be populated. A check constraint ensures that a password method has a password hash and an external method has a provider subject.
+Rules:
 
-### 6.3 Roles and Administrative Access
+- password methods require `password_hash`;
+- external providers require `provider_subject`;
+- the tuple `(method_type, provider_subject)` is unique when the provider subject is present;
+- password hashes must never appear in logs, audit payloads, or analytics.
 
-Administrative authorization uses:
+### 7.3 `identity.sessions`
 
-- `identity.roles`;
-- `identity.permissions`;
-- `identity.account_roles`;
-- `identity.role_permissions`.
-
-System roles include `PARENT`, `CONTENT_EDITOR`, `CONTENT_REVIEWER`, `SUPPORT_AGENT`, `BILLING_ADMIN`, and `PLATFORM_ADMIN`.
-
-Role assignment and removal must produce immutable audit events.
-
-### 6.4 Sessions and Token Families
-
-`identity.sessions` stores long-lived session metadata, not raw access tokens.
-
-Relevant columns:
+Stores durable session metadata, not raw access or refresh tokens.
 
 ```text
 id
@@ -259,75 +285,115 @@ revoked_at
 revocation_reason
 ```
 
-Raw refresh tokens are never stored. Token hashes or family identifiers are used for replay detection. Expired session rows are deleted by a scheduled retention job.
+Indexes:
 
-### 6.5 Parent Zone PIN
+```sql
+create index idx_sessions__account_active
+    on identity.sessions(account_id, expires_at desc)
+    where revoked_at is null;
 
-The parent PIN is represented in `profiles.parent_security_settings`:
-
-```text
-account_id
-pin_hash
-failed_attempt_count
-locked_until
-biometric_enabled
-updated_at
-version
+create unique index uq_sessions__refresh_family
+    on identity.sessions(refresh_token_family_id);
 ```
 
-The PIN is hashed with an appropriate password-hashing algorithm. Plain PIN values are never persisted. Lockout state must be transactionally updated to prevent concurrent brute-force attempts.
+Expired and revoked sessions are removed according to retention policy after security investigation windows expire.
 
-## 7. Child Profile Model
+### 7.4 Authorization Tables
 
-### 7.1 Child Profiles
+```text
+identity.roles
+identity.permissions
+identity.account_roles
+identity.role_permissions
+```
 
-`profiles.child_profiles` contains the minimum information required to personalize the child experience.
+System roles:
+
+- `PARENT`;
+- `CONTENT_EDITOR`;
+- `CONTENT_REVIEWER`;
+- `SUPPORT_AGENT`;
+- `BILLING_ADMIN`;
+- `PLATFORM_ADMIN`.
+
+Role changes create immutable audit events.
+
+### 7.5 Security Challenges
+
+`identity.security_challenges` stores short-lived verification challenges:
 
 ```text
 id
 account_id
-name
-birth_year
-age_band
-avatar_asset_id
-preferred_language
-is_default
-status
+challenge_type
+secret_hash
+attempt_count
+expires_at
+consumed_at
 created_at
-updated_at
-deleted_at
-version
 ```
 
-Privacy rules:
+The table is periodically purged. Plain verification codes are never stored.
 
-- exact birth dates are not required for MVP;
-- use `birth_year` or an explicit `age_band` rather than collecting unnecessary personal information;
-- names may be nicknames and are not assumed to be legal names;
-- analytics events reference profile IDs, never profile names;
-- no child email address or phone number is collected.
+## 8. Family and Profiles Schema
 
-Supported age bands should be modeled as stable codes such as `AGE_0_2`, `AGE_3_4`, `AGE_5_7`, and `AGE_8_PLUS`.
-
-At most one active profile per account may be marked as default. PostgreSQL enforces this through a partial unique index.
+### 8.1 `profiles.child_profiles`
 
 ```sql
+create table profiles.child_profiles (
+    id uuid primary key,
+    account_id uuid not null,
+    display_name varchar(40) not null,
+    birth_year smallint null,
+    age_band varchar(16) not null,
+    avatar_asset_id uuid null,
+    preferred_language varchar(16) not null,
+    is_default boolean not null default false,
+    status varchar(24) not null default 'ACTIVE',
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+    deleted_at timestamptz null,
+    version bigint not null default 0,
+    constraint fk_child_profiles__accounts
+        foreign key (account_id) references identity.accounts(id),
+    constraint ck_child_profiles__age_band
+        check (age_band in ('AGE_0_2','AGE_3_4','AGE_5_7','AGE_8_PLUS')),
+    constraint ck_child_profiles__status
+        check (status in ('ACTIVE','PAUSED','DELETION_PENDING','DELETED'))
+);
+```
+
+Privacy requirements:
+
+- exact birth date is not required for MVP;
+- legal names are not required;
+- no child email or telephone number is collected;
+- analytics never records the display name;
+- deletion must remove or pseudonymize profile-linked analytics according to policy.
+
+Indexes:
+
+```sql
+create index idx_child_profiles__account_active
+    on profiles.child_profiles(account_id, created_at)
+    where deleted_at is null;
+
 create unique index uq_child_profiles__one_default
     on profiles.child_profiles(account_id)
     where is_default = true and deleted_at is null;
 ```
 
-### 7.2 Profile Preferences
+### 8.2 `profiles.profile_preferences`
 
-`profiles.profile_preferences` stores one-to-one preferences:
+One-to-one with child profile.
 
 ```text
-profile_id
+profile_id PK/FK
 text_display_enabled
 text_highlight_enabled
 autoplay_next_enabled
 ambient_sound_enabled
-ambient_sound_type
+ambient_sound_key
 ambient_sound_volume
 story_volume
 sleep_timer_minutes
@@ -336,14 +402,18 @@ updated_at
 version
 ```
 
-Volumes are constrained to a fixed range, for example `0..100`. Sleep timer values must belong to an approved set or be null.
+Checks:
 
-### 7.3 Parental Content Settings
+```sql
+constraint ck_profile_preferences__ambient_volume check (ambient_sound_volume between 0 and 100)
+constraint ck_profile_preferences__story_volume check (story_volume between 0 and 100)
+constraint ck_profile_preferences__sleep_timer check (sleep_timer_minutes is null or sleep_timer_minutes in (5,10,15,20,30,45,60))
+```
 
-`profiles.parental_content_settings` stores controls configured by the parent:
+### 8.3 `profiles.parental_content_settings`
 
 ```text
-profile_id
+profile_id PK/FK
 maximum_age_rating
 allow_autoplay
 allow_downloads
@@ -355,44 +425,45 @@ updated_at
 version
 ```
 
-The service layer interprets bedtime using the account timezone. Database values use `time` without timezone plus the account timezone identifier stored in account preferences.
+Bedtime values are interpreted using the account timezone.
 
-## 8. Content Catalog Model
+### 8.4 `profiles.parent_security_settings`
 
-### 8.1 Content Hierarchy
+```text
+account_id PK/FK
+pin_hash
+failed_attempt_count
+locked_until
+biometric_enabled
+last_verified_at
+updated_at
+version
+```
 
-The catalog supports standalone stories and episodic series.
+Concurrent failed PIN attempts must lock the row or use an atomic update.
+
+## 9. Catalog Schema
+
+### 9.1 Content Hierarchy
 
 ```mermaid
 erDiagram
     SERIES ||--o{ STORIES : contains
-    STORIES ||--o{ STORY_EPISODES : contains
-    STORIES }o--o{ CATEGORIES : classified_as
-    STORIES ||--o{ STORY_ASSETS : uses
-    STORY_EPISODES ||--o{ EPISODE_ASSETS : uses
+    STORIES ||--o{ EPISODES : has
     STORIES ||--o{ STORY_LOCALIZATIONS : translated_as
+    EPISODES ||--o{ EPISODE_LOCALIZATIONS : translated_as
+    STORIES }o--o{ CATEGORIES : classified_as
+    COLLECTIONS }o--o{ STORIES : curates
+    STORIES ||--o{ CONTENT_REVISIONS : revised_as
 ```
 
-A `story` is the primary discoverable content item. A story may be standalone or may belong to a series. When a story has episodes, each episode has its own playback asset and sequence number.
-
-### 8.2 Stories
-
-`catalog.stories`:
+### 9.2 `catalog.series`
 
 ```text
 id
-series_id
-content_type
 slug
 publication_status
-access_tier
-minimum_age
-maximum_age
-estimated_duration_seconds
-primary_language
 cover_asset_id
-published_at
-unpublished_at
 created_by
 updated_by
 created_at
@@ -400,54 +471,80 @@ updated_at
 version
 ```
 
-Allowed publication states:
+### 9.3 `catalog.stories`
 
-```text
-DRAFT -> IN_REVIEW -> APPROVED -> SCHEDULED -> PUBLISHED
-                                  -> REJECTED
-PUBLISHED -> UNPUBLISHED -> ARCHIVED
+```sql
+create table catalog.stories (
+    id uuid primary key,
+    series_id uuid null,
+    content_type varchar(24) not null,
+    slug varchar(160) not null,
+    publication_status varchar(24) not null,
+    access_tier varchar(16) not null,
+    minimum_age smallint not null default 0,
+    maximum_age smallint not null default 7,
+    estimated_duration_seconds integer null,
+    primary_language varchar(16) not null,
+    cover_asset_id uuid null,
+    published_at timestamptz null,
+    unpublished_at timestamptz null,
+    scheduled_publish_at timestamptz null,
+    created_by uuid not null,
+    updated_by uuid not null,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+    version bigint not null default 0,
+    constraint uq_stories__slug unique (slug),
+    constraint ck_stories__publication_status check (
+      publication_status in ('DRAFT','IN_REVIEW','APPROVED','REJECTED','SCHEDULED','PUBLISHED','UNPUBLISHED','ARCHIVED')
+    ),
+    constraint ck_stories__access_tier check (access_tier in ('FREE','PREMIUM')),
+    constraint ck_stories__age_range check (minimum_age >= 0 and maximum_age >= minimum_age),
+    constraint ck_stories__duration check (estimated_duration_seconds is null or estimated_duration_seconds > 0)
+);
 ```
 
-Publication state transitions are validated in the application layer and recorded in `catalog.content_status_history`.
+Indexes:
 
-Constraints:
+```sql
+create index idx_stories__published_age_tier
+    on catalog.stories(minimum_age, maximum_age, access_tier, published_at desc)
+    where publication_status = 'PUBLISHED';
 
-- minimum age cannot exceed maximum age;
-- duration must be non-negative;
-- a published story requires a cover image and at least one playable audio asset;
-- `slug` is unique per primary language among non-archived stories;
-- premium access is represented by `access_tier`, not by duplicating catalog records.
+create index idx_stories__series
+    on catalog.stories(series_id, published_at)
+    where series_id is not null;
 
-### 8.3 Story Localization
+create index idx_stories__scheduled
+    on catalog.stories(scheduled_publish_at)
+    where publication_status = 'SCHEDULED';
+```
 
-Localized text is stored separately in `catalog.story_localizations`:
+### 9.4 `catalog.story_localizations`
 
 ```text
 id
 story_id
 locale
 title
+description
 short_description
-long_description
-narrator_name
-search_keywords
+search_document
 created_at
 updated_at
 version
 ```
 
-The pair `(story_id, locale)` is unique. The localization row may exist before localized audio is ready, but a story cannot be published for a locale until all required localized assets are validated.
+Unique constraint: `(story_id, locale)`.
 
-### 8.4 Series and Episodes
+Initial search may use a generated `tsvector` or an explicitly maintained search column. Search implementation must be benchmarked before introducing an external search engine.
 
-`catalog.series` stores series-level metadata and display ordering.
-
-`catalog.story_episodes` stores:
+### 9.5 `catalog.episodes`
 
 ```text
 id
 story_id
-episode_number
+sequence_number
 publication_status
 estimated_duration_seconds
 published_at
@@ -456,191 +553,279 @@ updated_at
 version
 ```
 
-The pair `(story_id, episode_number)` is unique. Episode numbers are positive and stable after publication. Reordering must not rewrite historical episode numbers; display order may use a separate sortable column if needed.
+Unique: `(story_id, sequence_number)`.
 
-### 8.5 Categories, Collections, and Tags
+An episode cannot be published if the parent story is not approved for publication.
 
-Categories are curated navigation entities. Tags are internal classification values. Collections are editorial groupings.
+### 9.6 Categories and Collections
 
-Tables:
+```text
+catalog.categories
+catalog.category_localizations
+catalog.story_categories
+catalog.collections
+catalog.collection_localizations
+catalog.collection_stories
+```
 
-- `catalog.categories`;
-- `catalog.category_localizations`;
-- `catalog.story_categories`;
-- `catalog.tags`;
-- `catalog.story_tags`;
-- `catalog.collections`;
-- `catalog.collection_localizations`;
-- `catalog.collection_items`.
+Join tables use composite primary keys unless independent lifecycle metadata is required.
 
-Many-to-many tables use composite primary keys unless an independent lifecycle or audit identity is required.
+Example:
 
-A collection item stores `position`, allowing deterministic ordering. The pair `(collection_id, story_id)` is unique.
+```sql
+create table catalog.story_categories (
+    story_id uuid not null,
+    category_id uuid not null,
+    assigned_at timestamptz not null default now(),
+    primary key (story_id, category_id)
+);
+```
 
-### 8.6 Media Assets
+`collection_stories` includes `position integer not null` and a unique constraint on `(collection_id, position)`.
 
-`catalog.media_assets` stores metadata for every object-storage resource:
+### 9.7 Editorial Revisions
+
+`catalog.content_revisions` stores structured revisions required for review and audit.
+
+```text
+id
+content_type
+content_id
+revision_number
+snapshot_json
+change_summary
+created_by
+created_at
+```
+
+`snapshot_json` is allowed because it stores an immutable review snapshot, not operational fields queried in the hot path.
+
+## 10. Media Schema
+
+### 10.1 `media.media_assets`
 
 ```text
 id
 asset_type
-storage_provider
-bucket_name
-object_key
-mime_type
-file_size_bytes
+owner_type
+owner_id
+original_filename_safe
+content_type
+size_bytes
 checksum_sha256
-duration_milliseconds
-width_pixels
-height_pixels
+storage_bucket
+storage_key
 processing_status
 scan_status
 created_by
 created_at
 updated_at
+version
 ```
 
 Rules:
 
-- object keys are unique;
-- checksums support duplicate detection and integrity verification;
-- assets must pass malware scanning before publication;
-- audio assets must pass media validation and duration extraction;
-- failed uploads are retained only for a short operational period;
-- deleting a database record does not immediately delete the object; a controlled garbage-collection job verifies that no references remain.
+- filenames are sanitized and are metadata only;
+- object key is server-generated;
+- checksum is required before publication;
+- media cannot be attached to published content until malware scan and validation succeed;
+- replacing media creates a new asset record rather than mutating historical identity.
 
-### 8.7 Synchronized Text
-
-Narration synchronization is represented by `catalog.story_cues` or `catalog.episode_cues`:
+### 10.2 `media.media_variants`
 
 ```text
 id
-content_id
-sequence_number
-start_millisecond
-end_millisecond
-text_value
-paragraph_number
-```
-
-Constraints ensure:
-
-- start is non-negative;
-- end is greater than start;
-- sequence numbers are unique per content item;
-- cue times do not exceed known audio duration.
-
-Overlap validation is best performed by the application and content-processing pipeline. A publication check rejects invalid cue sets.
-
-## 9. Playback and Engagement Model
-
-### 9.1 Playback Progress
-
-`playback.progress` stores one current progress record per profile and playable content item.
-
-```text
-id
-profile_id
-story_id
-episode_id
-position_milliseconds
-duration_milliseconds
-progress_percent
-status
-first_started_at
-last_played_at
-completed_at
-updated_at
-version
-```
-
-Exactly one of `story_id` or `episode_id` must be populated. This is enforced by a check constraint.
-
-The uniqueness rule is implemented with partial indexes:
-
-```sql
-create unique index uq_progress__profile_story
-    on playback.progress(profile_id, story_id)
-    where story_id is not null;
-
-create unique index uq_progress__profile_episode
-    on playback.progress(profile_id, episode_id)
-    where episode_id is not null;
-```
-
-Progress updates are idempotent and use optimistic locking or an atomic upsert. Out-of-order updates from offline devices must not move progress backwards unless the user explicitly restarts the story.
-
-### 9.2 Listening Sessions
-
-`playback.listening_sessions` is append-oriented and supports analytics, parental summaries, free-tier ad frequency, and operational diagnostics.
-
-```text
-id
-profile_id
-story_id
-episode_id
-session_started_at
-session_ended_at
-start_position_ms
-end_position_ms
-listened_seconds
-completion_reason
-device_session_id
-is_offline
+asset_id
+variant_key
+content_type
+size_bytes
+duration_ms
+width
+height
+bitrate_kbps
+storage_key
+checksum_sha256
 created_at
 ```
 
-A session is not a billing ledger. It may be corrected or deduplicated when clients retry. Idempotency is enforced using a client-generated session ID unique within the profile.
+Unique: `(asset_id, variant_key)`.
 
-### 9.3 Favorites and Bookmarks
+### 10.3 `media.content_media_links`
 
-`playback.favorites` uses `(profile_id, story_id)` as a composite key.
-
-Bookmarks are optional for MVP. If introduced, `playback.bookmarks` stores a content reference, playback position, optional parent-visible label, and timestamps.
-
-### 9.4 Downloads
-
-`playback.offline_downloads` tracks authorization and manifest state, not the files physically stored on the device.
+Maps a story or episode to an asset and semantic purpose.
 
 ```text
 id
+content_type
+content_id
+asset_id
+usage_type
+locale
+position
+created_at
+```
+
+Usage types include:
+
+- `COVER`;
+- `ILLUSTRATION`;
+- `AUDIO_PRIMARY`;
+- `AUDIO_ALTERNATE`;
+- `SYNCHRONIZED_TEXT`;
+- `WAVEFORM`.
+
+### 10.4 Processing Jobs
+
+`media.processing_jobs`:
+
+```text
+id
+asset_id
+job_type
+status
+attempt_count
+next_attempt_at
+started_at
+completed_at
+error_code
+error_summary
+created_at
+updated_at
+```
+
+Large technical logs remain in the logging platform, not in PostgreSQL.
+
+## 11. Playback and Progress Schema
+
+### 11.1 `playback.playback_sessions`
+
+```text
+id
+account_id
 profile_id
 story_id
 episode_id
 device_id_hash
-manifest_version
-entitlement_expires_at
-status
+started_at
+ended_at
+completion_reason
+ad_eligible_after_session
+client_session_id
 created_at
-last_verified_at
-revoked_at
 ```
 
-Offline records are revoked when the subscription ends, the content is removed, or the parent disables downloads. The mobile client must periodically revalidate entitlements.
+`client_session_id` plus account or device identity supports idempotent retry.
 
-## 10. Billing and Entitlement Model
+### 11.2 `playback.playback_progress`
 
-### 10.1 Plans and Prices
+One current progress row per profile and playable item.
 
-`billing.plans` defines product capabilities. `billing.plan_prices` defines store-specific prices.
+```sql
+create table playback.playback_progress (
+    id uuid primary key,
+    profile_id uuid not null,
+    story_id uuid not null,
+    episode_id uuid null,
+    position_ms bigint not null,
+    duration_ms bigint not null,
+    completion_percentage numeric(5,2) not null,
+    status varchar(16) not null,
+    last_played_at timestamptz not null,
+    source_device_id_hash varchar(128) null,
+    client_updated_at timestamptz null,
+    updated_at timestamptz not null default now(),
+    version bigint not null default 0,
+    constraint ck_playback_progress__position check (position_ms >= 0),
+    constraint ck_playback_progress__duration check (duration_ms > 0),
+    constraint ck_playback_progress__percentage check (completion_percentage between 0 and 100),
+    constraint ck_playback_progress__status check (status in ('NOT_STARTED','IN_PROGRESS','COMPLETED'))
+);
+```
 
-A plan is not identified by its current price. Historical subscriptions keep references to the plan and provider product identifiers used at purchase time.
+Uniqueness must distinguish standalone stories and episodes. One safe approach is a generated playable key in application logic plus a unique expression index.
 
-Relevant fields:
+Conflict resolution:
+
+1. reject impossible values;
+2. prefer a confirmed completion over a lower position;
+3. otherwise prefer the most recent trusted client timestamp within allowed skew;
+4. never move progress backwards automatically unless the user explicitly restarts.
+
+### 11.3 Progress Event History
+
+`playback.progress_events` is append-only and optional for the MVP. It is useful for sync diagnostics and analytics.
+
+High-volume event history must be partitioned monthly when volume justifies it.
+
+### 11.4 Favorites
 
 ```text
-plan_code
-billing_period
-trial_days
-maximum_profiles
-offline_enabled
-ads_enabled
-is_active
+playback.favorites
+- profile_id
+- story_id
+- created_at
+PK(profile_id, story_id)
 ```
 
-### 10.2 Subscriptions
+### 11.5 Listening History
 
-`billing.subscriptions`:
+Listening history is derived from sessions or stored as a compact read model. It must not duplicate unrestricted event detail indefinitely.
+
+## 12. Offline Download Schema
+
+### 12.1 `media.offline_manifests`
+
+```text
+id
+story_id
+episode_id
+manifest_version
+package_asset_id
+minimum_app_version
+expires_at
+created_at
+```
+
+### 12.2 `playback.device_downloads`
+
+```text
+id
+account_id
+profile_id
+device_id_hash
+manifest_id
+status
+downloaded_at
+last_verified_at
+revoked_at
+revocation_reason
+client_download_id
+created_at
+updated_at
+```
+
+Unique: `(device_id_hash, client_download_id)`.
+
+Premium entitlement expiry does not delete history immediately; it marks downloads as revocable and allows the device to synchronize the decision safely.
+
+## 13. Billing and Entitlements Schema
+
+### 13.1 `billing.plans`
+
+```text
+id
+plan_code
+billing_period
+provider_product_id
+is_active
+profile_limit
+offline_enabled
+ads_disabled
+created_at
+updated_at
+```
+
+### 13.2 `billing.subscriptions`
 
 ```text
 id
@@ -648,12 +833,13 @@ account_id
 plan_id
 provider
 provider_subscription_id
-provider_original_transaction_id
 status
+started_at
+trial_started_at
+trial_ends_at
 current_period_start
 current_period_end
-trial_start
-trial_end
+grace_period_end
 cancel_at_period_end
 cancelled_at
 ended_at
@@ -662,462 +848,723 @@ updated_at
 version
 ```
 
-Status values include `TRIALING`, `ACTIVE`, `PAST_DUE`, `GRACE_PERIOD`, `CANCELLED`, `EXPIRED`, `REFUNDED`, and `REVOKED`.
-
-Provider event timestamps and sequence information must be stored so delayed webhook delivery cannot overwrite a newer state.
-
-### 10.3 Purchase Events
-
-`billing.purchase_events` is append-only and stores normalized provider notifications.
-
-Each provider event has a unique event identifier. Duplicate webhooks return success after detecting the existing event.
-
-Raw provider payloads may be stored encrypted for a limited retention period, with secrets and unnecessary personal data removed.
-
-### 10.4 Entitlements
-
-`billing.entitlements` represents effective capabilities independently from subscription provider state.
-
-Examples:
-
-- `PREMIUM_CATALOG`;
-- `OFFLINE_DOWNLOADS`;
-- `MULTIPLE_PROFILES`;
-- `AD_FREE`.
-
-An entitlement has a source, validity interval, and revocation status. Sources may include subscription, promotion, support grant, or test account.
-
-The unique active entitlement rule must prevent overlapping duplicate grants of the same source and capability where possible.
-
-## 11. Advertising Frequency State
-
-The free experience displays an advertisement after two completed listening sessions and never in the middle of a story.
-
-`playback.ad_frequency_state` stores per-account or per-profile counters according to the final product rule:
+Allowed statuses:
 
 ```text
-profile_id
-eligible_session_count
-last_ad_shown_at
-last_eligible_session_at
-updated_at
-version
+PENDING, TRIAL, ACTIVE, GRACE_PERIOD, PAUSED, CANCELLED, EXPIRED, REVOKED
 ```
 
-The counter update and ad-decision creation must be transactional to prevent multiple devices from independently triggering duplicate ads.
+Indexes:
 
-The actual ad network impression is external. The platform stores only the decision, placement, and delivery result required for policy verification and analytics.
+```sql
+create index idx_subscriptions__account_status
+    on billing.subscriptions(account_id, status, current_period_end desc);
 
-## 12. Notification Model
+create unique index uq_subscriptions__provider_reference
+    on billing.subscriptions(provider, provider_subscription_id)
+    where provider_subscription_id is not null;
+```
 
-### 12.1 Notifications
+### 13.3 Purchase Events
 
-`notifications.notifications` is the durable, user-visible notification record.
+`billing.purchase_events` is append-only and preserves provider verification history.
+
+```text
+id
+provider
+event_id
+account_id
+subscription_id
+event_type
+provider_occurred_at
+payload_hash
+payload_redacted_json
+processing_status
+received_at
+processed_at
+```
+
+Unique: `(provider, event_id)`.
+
+Raw provider payload retention must be minimized and secrets removed.
+
+### 13.4 `billing.entitlements`
+
+Entitlements are authoritative evaluated capabilities.
 
 ```text
 id
 account_id
-type
-title_key
-body_key
-payload_json
-priority
+entitlement_key
+source_type
+source_id
+status
+valid_from
+valid_until
 created_at
-read_at
-expires_at
+updated_at
+version
 ```
 
-`payload_json` contains versioned, non-sensitive navigation metadata. It must not become an unstructured replacement for relational columns.
+Examples:
 
-### 12.2 Delivery Attempts
+- `PREMIUM_CONTENT`;
+- `OFFLINE_DOWNLOADS`;
+- `MULTIPLE_PROFILES`;
+- `AD_FREE`.
 
-`notifications.delivery_attempts` records push, email, or in-app delivery.
+A unique partial index prevents multiple overlapping active rows for the same entitlement where the chosen model requires a single effective source.
+
+## 14. Advertising Schema
+
+### 14.1 Session Counters
+
+`advertising.profile_ad_counters`:
+
+```text
+profile_id
+completed_eligible_sessions
+last_ad_attempt_at
+last_ad_completed_at
+updated_at
+version
+```
+
+The two-session policy must be transactionally evaluated.
+
+### 14.2 Ad Decisions
+
+`advertising.ad_decisions` provides auditable, idempotent decisions without storing provider tracking details unnecessarily.
+
+```text
+id
+account_id
+profile_id
+playback_session_id
+decision
+reason_code
+decision_token_hash
+expires_at
+created_at
+consumed_at
+```
+
+No ad decision may be created for an account with an effective `AD_FREE` entitlement.
+
+## 15. Notifications Schema
+
+### 15.1 `notifications.notifications`
+
+```text
+id
+account_id
+category
+title
+body
+deep_link
+template_key
+payload_json
+priority
+visible_from
+expires_at
+read_at
+dismissed_at
+created_at
+```
+
+`payload_json` must be small, versioned, and free of secrets.
+
+Indexes:
+
+```sql
+create index idx_notifications__account_inbox
+    on notifications.notifications(account_id, created_at desc)
+    where dismissed_at is null;
+
+create index idx_notifications__account_unread
+    on notifications.notifications(account_id, created_at desc)
+    where read_at is null and dismissed_at is null;
+```
+
+### 15.2 Preferences
+
+`notifications.notification_preferences`:
+
+```text
+account_id
+category
+in_app_enabled
+push_enabled
+email_enabled
+quiet_hours_start
+quiet_hours_end
+updated_at
+version
+```
+
+Primary key: `(account_id, category)`.
+
+### 15.3 Delivery Attempts
+
+`notifications.delivery_attempts`:
 
 ```text
 id
 notification_id
 channel
 provider
-provider_message_id
 status
 attempt_number
-next_retry_at
-sent_at
-delivered_at
-failed_at
-failure_code
+scheduled_at
+started_at
+completed_at
+provider_message_id
+error_code
+error_summary
 created_at
 ```
 
-The pair `(notification_id, channel, attempt_number)` is unique. Retries use exponential backoff and terminate after the configured maximum.
+Index pending attempts by `(status, scheduled_at)`.
 
-### 12.3 Device Registrations
+## 16. Administration and Audit
 
-`notifications.device_registrations` stores hashed device identity and push tokens encrypted at rest.
-
-A push token may move between accounts after logout/login, so activation is managed explicitly. Old tokens are deactivated rather than trusted indefinitely.
-
-## 13. Administrative Audit Model
+### 16.1 Audit Events
 
 `admin.audit_events` is append-only.
 
-Core fields:
-
 ```text
 id
 occurred_at
-actor_account_id
-actor_role
-operation
+actor_type
+actor_id
+action
 resource_type
 resource_id
 correlation_id
-request_id
 ip_hash
+result
+reason
 before_json
 after_json
-reason
+metadata_json
 ```
 
-Audit requirements:
+Rules:
 
-- sensitive fields are redacted;
-- audit rows cannot be changed through application APIs;
-- content publication, role assignment, subscription grants, account suspension, asset deletion, and moderation decisions are always audited;
-- large binary data is never copied into audit records;
-- audit retention is configurable and documented separately.
+- no update or delete through application roles;
+- sensitive fields are redacted before insert;
+- audit rows are not used as the only source of current business state;
+- high-volume retention uses partitioning by month;
+- archive and purge policies are approved by security and legal requirements.
 
-Database privileges should prevent the standard application role from deleting audit events.
+### 16.2 Moderation Records
 
-## 14. Integration Reliability Tables
-
-### 14.1 Transactional Outbox
-
-`integration.outbox_events` guarantees that domain changes and event publication are coordinated.
+`admin.moderation_decisions`:
 
 ```text
 id
-aggregate_type
-aggregate_id
-event_type
-event_version
-payload_json
-headers_json
-occurred_at
-available_at
-published_at
-attempt_count
-last_error
+content_type
+content_id
+revision_id
+reviewer_id
+decision
+reason_code
+comment
+created_at
 ```
 
-The business transaction inserts the outbox event in the same PostgreSQL transaction as the aggregate change. A publisher sends events to RabbitMQ and marks them as published.
+Decision values: `APPROVED`, `REJECTED`, `CHANGES_REQUESTED`.
 
-Indexes prioritize unpublished available events:
+## 17. Integration Tables
+
+### 17.1 Transactional Outbox
 
 ```sql
-create index idx_outbox__pending
+create table integration.outbox_events (
+    id uuid primary key,
+    aggregate_type varchar(80) not null,
+    aggregate_id uuid not null,
+    event_type varchar(160) not null,
+    event_version integer not null,
+    payload_json jsonb not null,
+    headers_json jsonb not null default '{}'::jsonb,
+    occurred_at timestamptz not null,
+    available_at timestamptz not null default now(),
+    published_at timestamptz null,
+    attempt_count integer not null default 0,
+    last_error_code varchar(80) null,
+    created_at timestamptz not null default now()
+);
+
+create index idx_outbox_events__pending
     on integration.outbox_events(available_at, occurred_at)
     where published_at is null;
 ```
 
-### 14.2 Consumer Inbox
+Business mutation and outbox insert occur in the same transaction.
 
-`integration.inbox_messages` prevents duplicate side effects for event consumers.
+### 17.2 Consumer Inbox
 
-The key includes `consumer_name` and `message_id`. Processing and inbox insertion occur in one transaction.
-
-### 14.3 API Idempotency
-
-`integration.idempotency_records` stores the result of retry-safe commands such as subscription validation, profile creation, and administrative publication actions.
-
-Records include request fingerprint, response status, response body, owner account, and expiry time. Reusing the same idempotency key with a different request fingerprint returns a conflict.
-
-## 15. Referential Integrity and Cascades
-
-Cascade deletion is used sparingly.
-
-Permitted examples:
-
-- deleting a draft cue set when its unpublished draft asset is deleted;
-- deleting profile preferences when a child profile is permanently purged;
-- deleting join-table rows when the owning aggregate is deleted.
-
-Forbidden examples:
-
-- cascading account deletion into billing history;
-- cascading story deletion into listening history;
-- cascading plan deletion into subscriptions;
-- cascading media deletion without reference checks.
-
-Most business deletions are workflows that archive, anonymize, or detach records in a controlled order.
-
-## 16. Indexing Strategy
-
-Every index must correspond to a real query, constraint, ordering requirement, or operational process.
-
-Standard priorities:
-
-1. unique business constraints;
-2. foreign-key lookup indexes;
-3. high-frequency account and profile queries;
-4. published catalog discovery;
-5. pending outbox and notification delivery;
-6. chronological audit and session queries;
-7. provider webhook deduplication.
-
-Examples:
-
-```sql
-create index idx_stories__published_age_tier
-    on catalog.stories(publication_status, minimum_age, maximum_age, access_tier, published_at desc)
-    where publication_status = 'PUBLISHED';
-
-create index idx_progress__profile_recent
-    on playback.progress(profile_id, last_played_at desc);
-
-create index idx_sessions__profile_started
-    on playback.listening_sessions(profile_id, session_started_at desc);
-
-create unique index uq_purchase_events__provider_event
-    on billing.purchase_events(provider, provider_event_id);
+```text
+integration.inbox_messages
+- consumer_name
+- message_id
+- event_type
+- received_at
+- processed_at
+- processing_status
+- error_code
+PK(consumer_name, message_id)
 ```
 
-Avoid indexing low-cardinality booleans alone. Prefer partial or composite indexes aligned with actual filters.
+This ensures idempotent event consumption.
 
-Index usage must be reviewed with `EXPLAIN (ANALYZE, BUFFERS)` before production optimizations are accepted.
+### 17.3 HTTP Idempotency
 
-## 17. Search Strategy
+`integration.idempotency_records`:
 
-The first release may implement catalog search using PostgreSQL full-text search and trigram indexes.
+```text
+idempotency_key
+scope_type
+scope_id
+request_hash
+response_status
+response_body_json
+created_at
+expires_at
+```
 
-A generated or maintained search vector may include:
+Unique: `(scope_type, scope_id, idempotency_key)`.
 
-- localized title;
-- short description;
-- narrator;
-- curated keywords;
-- category names;
-- series title.
+The same key with a different request hash returns a conflict.
 
-Search is always filtered by publication status, language, age eligibility, and account entitlement.
+### 17.4 Scheduled Jobs
 
-A dedicated search engine should be introduced only after measured requirements exceed PostgreSQL capabilities. The source of truth remains PostgreSQL.
+`integration.scheduled_jobs` stores business-relevant schedules, not framework internals.
 
-## 18. Partitioning and Data Growth
+```text
+id
+job_type
+business_key
+payload_json
+status
+run_at
+locked_at
+locked_by
+attempt_count
+last_error_code
+created_at
+updated_at
+```
 
-Partitioning is not mandatory for initial launch. It becomes appropriate when append-heavy tables reach operational thresholds.
+## 18. Analytics Schema
+
+Analytics data must be privacy-aware and non-blocking.
+
+### 18.1 Product Events
+
+`analytics.product_events` may contain:
+
+```text
+id
+occurred_at
+event_type
+event_version
+account_id_pseudonym
+profile_id_pseudonym
+session_id
+properties_json
+received_at
+```
+
+Rules:
+
+- never store child display names;
+- avoid raw IP addresses;
+- reject unrestricted free-form properties;
+- partition high-volume events monthly;
+- define a retention window;
+- aggregate before long-term retention where possible.
+
+### 18.2 Aggregates
+
+Daily aggregate tables may include:
+
+- story starts;
+- story completions;
+- unique active accounts;
+- subscription conversion counts;
+- notification delivery rates;
+- playback startup failures.
+
+Aggregates must not be used as transactional truth.
+
+## 19. Indexing Strategy
+
+### 19.1 General Rules
+
+An index must support a documented query. Every index has a write and storage cost.
+
+Before adding an index:
+
+1. capture the target SQL;
+2. inspect `EXPLAIN (ANALYZE, BUFFERS)` in a representative environment;
+3. confirm selectivity and sort requirements;
+4. add the smallest useful index;
+5. verify write impact;
+6. monitor usage after release.
+
+### 19.2 Common Patterns
+
+- foreign-key columns are indexed when used in joins or cascade checks;
+- active-row queries use partial indexes;
+- timeline queries use `(owner_id, created_at desc)`;
+- worker queues use partial indexes on pending status and due time;
+- search indexes are locale-aware;
+- large text and JSONB fields are excluded from covering indexes.
+
+### 19.3 Avoid
+
+- indexing every column;
+- duplicate left-prefix indexes;
+- low-selectivity boolean-only indexes;
+- unbounded `%term%` scans in hot paths;
+- indexes introduced without measured query evidence.
+
+## 20. Partitioning
+
+Partitioning is introduced only after volume evidence or when retention management clearly benefits.
 
 Likely candidates:
 
-- `playback.listening_sessions`, partitioned monthly by `session_started_at`;
-- `admin.audit_events`, partitioned monthly by `occurred_at`;
-- `integration.outbox_events`, partitioned by creation period if cleanup becomes expensive;
-- `notifications.delivery_attempts`, partitioned by `created_at`.
+- `admin.audit_events` by month;
+- `analytics.product_events` by month;
+- `playback.progress_events` by month;
+- `billing.purchase_events` by quarter if volume requires it.
 
-Partitioning must not be introduced before retention, backup, and query behavior are understood.
+Partition keys must align with retention and common query predicates.
 
-## 19. Data Retention and Privacy
+## 21. JSONB Policy
 
-Retention periods must be finalized with legal and product owners. Architectural defaults:
+Use `jsonb` only for:
 
-| Data | Initial retention approach |
-|---|---|
-| Active account data | While account remains active |
-| Deleted account identifiers | Anonymize after deletion workflow and legal hold checks |
-| Listening progress | Until profile deletion or account deletion |
-| Listening sessions | Retain for a bounded analytics period, then aggregate or delete |
-| Push delivery attempts | Short operational retention |
-| Expired sessions | Delete regularly |
-| Failed upload metadata | Delete after troubleshooting window |
-| Audit events | Long retention based on security and legal requirements |
-| Raw billing provider payloads | Minimal encrypted retention |
-| Outbox/inbox records | Delete or archive after safe replay window |
+- immutable event payloads;
+- redacted external-provider payload snapshots;
+- versioned notification payloads;
+- content revision snapshots;
+- bounded metadata that is not part of critical relational integrity.
 
-Account deletion must distinguish:
+Do not use `jsonb` to avoid modeling:
 
-- data that can be immediately deleted;
-- data that must be anonymized;
-- financial records that must be retained;
-- audit records that remain but lose direct personal identifiers;
-- object-storage assets owned by the platform rather than the user.
+- account status;
+- subscription state;
+- profile preferences;
+- content publication status;
+- searchable catalog relationships;
+- entitlement validity.
 
-## 20. Encryption and Sensitive Data
+Every JSONB structure has a documented schema version.
 
-- TLS is required for all database connections;
-- production storage and backups are encrypted at rest;
-- passwords and PINs use one-way adaptive hashes;
-- provider tokens, push tokens, and selected payloads use application-level encryption where necessary;
-- encryption keys are stored outside the database in a secret-management system;
-- logs and audit JSON must redact secrets;
-- database roles follow least privilege.
+## 22. Transaction Boundaries
 
-No sensitive value may be placed in a column merely because the column is JSONB.
+A transaction should normally update one aggregate and its outbox records.
 
-## 21. Database Roles
+Mandatory examples:
 
-Recommended roles:
+- account creation plus authentication method;
+- profile creation plus default-profile correction;
+- story publication state plus content revision and outbox event;
+- subscription verification plus entitlement update and outbox event;
+- progress merge plus session completion;
+- ad counter update plus ad decision.
 
-- `app_runtime`: normal application reads and writes within approved schemas;
-- `migration_owner`: DDL and schema migration rights;
-- `readonly_support`: restricted diagnostic queries with sensitive columns masked;
-- `analytics_reader`: access to approved views or replicas;
-- `audit_writer`: insert-only access to audit events where operationally practical;
-- `backup_operator`: managed infrastructure permissions only.
+External HTTP calls must not run inside long database transactions.
 
-The application must not run as the database owner or superuser.
+## 23. Concurrency and Locking
 
-## 22. Migration Strategy
+Use optimistic locking by default.
 
-Flyway is the preferred migration tool.
+Pessimistic locking is reserved for short, measured critical sections such as:
 
-Migration rules:
+- refresh-token replay handling;
+- parent PIN lockout counters;
+- subscription provider-event reconciliation;
+- two-session advertising counter evaluation;
+- claiming scheduled jobs.
 
-1. Applied migrations are immutable.
-2. File names follow `V<version>__<description>.sql`.
-3. Repeatable migrations are limited to views and functions where appropriate.
-4. Migrations run in CI against a clean database and an upgraded previous-version database.
-5. Large table changes use expand-and-contract deployment.
-6. Destructive changes require backups, verification queries, and explicit approval.
-7. Application deployment must remain compatible during rolling upgrades.
+Worker claiming should use `FOR UPDATE SKIP LOCKED` where appropriate.
 
-Example expand-and-contract sequence:
+## 24. Migration Strategy
 
-1. add a nullable new column;
-2. deploy code writing both old and new formats;
-3. backfill in controlled batches;
-4. deploy code reading the new format;
-5. add constraints after verification;
-6. remove old writes;
-7. remove the old column in a later release.
+Flyway is mandatory.
 
-## 23. Backup and Recovery
+### 24.1 File Naming
 
-Production requires:
-
-- automated full backups;
-- point-in-time recovery through WAL archiving;
-- encrypted backup storage;
-- cross-region or independent failure-domain copies where commercially justified;
-- periodic restore tests;
-- documented RPO and RTO targets;
-- pre-migration backups for high-risk releases.
-
-A backup is not considered valid until restoration has been tested.
-
-## 24. Testing Requirements
-
-Database-related tests include:
-
-- repository integration tests with Testcontainers PostgreSQL;
-- migration tests from empty and previous schemas;
-- constraint tests for critical invariants;
-- concurrent progress-update tests;
-- duplicate webhook and idempotency tests;
-- outbox publishing and inbox deduplication tests;
-- account deletion and anonymization tests;
-- query-plan tests for critical catalog and playback queries where needed;
-- data generation at realistic volumes for performance testing.
-
-H2 or other in-memory databases must not replace PostgreSQL in persistence integration tests because SQL behavior and constraints differ.
-
-## 25. Observability
-
-Monitor at minimum:
-
-- connection-pool usage and wait time;
-- transaction duration;
-- slow query count and latency percentiles;
-- deadlocks and lock waits;
-- replication lag;
-- database size and table growth;
-- index hit ratio and unused indexes;
-- autovacuum health;
-- migration duration and failure;
-- outbox backlog;
-- notification delivery backlog;
-- backup completion and restore-test results.
-
-Queries must carry correlation context through application telemetry where supported, but SQL logs must not expose sensitive values.
-
-## 26. Initial Entity Relationship Overview
-
-```mermaid
-erDiagram
-    ACCOUNTS ||--o{ AUTHENTICATION_METHODS : authenticates_with
-    ACCOUNTS ||--o{ SESSIONS : owns
-    ACCOUNTS ||--o{ CHILD_PROFILES : owns
-    CHILD_PROFILES ||--|| PROFILE_PREFERENCES : configures
-    CHILD_PROFILES ||--o{ PLAYBACK_PROGRESS : maintains
-    CHILD_PROFILES ||--o{ LISTENING_SESSIONS : creates
-    CHILD_PROFILES ||--o{ FAVORITES : selects
-    SERIES ||--o{ STORIES : groups
-    STORIES ||--o{ STORY_LOCALIZATIONS : translates
-    STORIES ||--o{ STORY_EPISODES : contains
-    STORIES }o--o{ CATEGORIES : classified_as
-    STORIES ||--o{ MEDIA_ASSETS : references
-    ACCOUNTS ||--o{ SUBSCRIPTIONS : purchases
-    SUBSCRIPTIONS ||--o{ ENTITLEMENTS : grants
-    ACCOUNTS ||--o{ NOTIFICATIONS : receives
-    NOTIFICATIONS ||--o{ DELIVERY_ATTEMPTS : delivers
+```text
+V1__create_identity_schema.sql
+V2__create_profile_tables.sql
+V3__create_catalog_core.sql
+V4__add_story_publication_indexes.sql
 ```
 
-This diagram is intentionally conceptual. Exact physical foreign keys and join entities are defined in migrations and future schema-specific diagrams.
+### 24.2 Migration Rules
 
-## 27. Implementation Sequence
+- committed versioned migrations are immutable;
+- each migration has one coherent purpose;
+- schema objects are fully qualified;
+- migrations are tested against an empty database and a realistic previous version;
+- large data backfills are separated from blocking DDL;
+- production rollout order is documented when application compatibility matters;
+- repeatable migrations are limited to views or replaceable functions.
 
-Recommended delivery order:
+### 24.3 Expand and Contract
 
-1. database bootstrap, schemas, Flyway, roles, and common conventions;
-2. identity accounts, authentication methods, and sessions;
-3. child profiles, preferences, and parent security settings;
-4. catalog stories, localization, categories, and media assets;
-5. playback progress, favorites, and listening sessions;
-6. subscriptions, provider events, and entitlements;
-7. notifications and device registrations;
-8. outbox, inbox, and idempotency infrastructure;
-9. administrative audit and content status history;
-10. search indexes, retention jobs, and performance tuning.
+For a breaking column replacement:
 
-Each phase must include migrations, integration tests, repository code, OpenAPI changes, monitoring, and rollback considerations.
+1. add the new nullable column;
+2. deploy code that writes both old and new representations;
+3. backfill in bounded batches;
+4. verify completeness;
+5. switch reads to the new column;
+6. stop writing the old column;
+7. remove old column in a later release.
 
-## 28. Decisions Requiring Confirmation
+### 24.4 Rollback Philosophy
 
-The following details may be refined without invalidating the architecture:
+Forward-fix is preferred for applied migrations. Destructive down migrations are not assumed safe.
 
-- whether ad frequency is tracked per account or per child profile;
-- exact supported languages at launch;
-- exact age-band codes;
-- legal retention periods by deployment region;
-- whether standalone stories and episodic stories share one aggregate or use separate aggregates;
-- whether PostgreSQL full-text search is sufficient beyond MVP;
-- when listening-session partitioning becomes necessary;
-- final billing-provider normalization rules for Apple and Google stores.
+Application rollback must be considered before applying a schema change. Expand-and-contract maintains compatibility across releases.
 
-Until a decision is finalized, implementations should use stable abstractions and avoid irreversible schema coupling.
+## 25. Security Controls
 
-## 29. Definition of Done
+- production application roles do not own schemas;
+- migration credentials are separate from runtime credentials;
+- runtime roles receive least privilege;
+- admin/reporting access is read-only unless explicitly justified;
+- TLS is required for database connections outside trusted local development;
+- encrypted backups are mandatory;
+- secrets are never stored in migration scripts;
+- personally identifiable fields are minimized;
+- raw tokens, PINs, passwords, and payment credentials are never persisted;
+- sensitive audit fields are redacted.
 
-The database design is implementation-ready for a feature when:
+Recommended role model:
 
-- the owning bounded context is identified;
-- tables and columns follow naming conventions;
-- primary, foreign, unique, and check constraints are defined;
-- privacy impact has been considered;
-- required indexes correspond to known queries;
-- deletion and retention behavior are explicit;
-- concurrency and idempotency behavior are documented;
-- migrations work from clean and previous versions;
-- Testcontainers integration tests cover critical paths;
-- operational metrics and failure recovery are defined;
-- cross-context dependencies are recorded.
+```text
+kabp_owner       owns schemas, not used by application
+kabp_migrator    executes approved Flyway migrations
+kabp_app         normal runtime read/write permissions
+kabp_worker      worker-specific permissions
+kabp_readonly    support/reporting read access
+```
 
-## 30. Related Documents
+## 26. Data Retention and Deletion
+
+Retention periods must be configurable and approved before production launch.
+
+Categories:
+
+| Data | Retention approach |
+|---|---|
+| Active account | while service is provided |
+| Deleted account | staged deletion and legal exceptions |
+| Sessions | short security window after expiry/revocation |
+| Playback current progress | account/profile lifetime |
+| Detailed playback events | limited operational/analytics window |
+| Notifications | bounded inbox history |
+| Purchase events | financial/legal retention requirement |
+| Audit events | security and compliance requirement |
+| Raw provider payloads | minimum necessary period |
+| Analytics events | pseudonymized and time-limited |
+
+Account deletion workflow:
+
+```mermaid
+sequenceDiagram
+    participant Parent
+    participant Identity
+    participant Domains
+    participant Storage
+    participant Audit
+
+    Parent->>Identity: Request account deletion
+    Identity->>Identity: Mark DELETION_PENDING
+    Identity->>Domains: Publish AccountDeletionRequested
+    Domains->>Domains: Delete or anonymize owned data
+    Domains->>Storage: Schedule personal media cleanup if any
+    Domains-->>Identity: DomainDeletionCompleted
+    Identity->>Audit: Record completion
+    Identity->>Identity: Mark DELETED
+```
+
+## 27. Backup and Recovery
+
+### 27.1 Requirements
+
+- automated encrypted backups;
+- point-in-time recovery for PostgreSQL;
+- object storage versioning or equivalent recovery controls;
+- backup monitoring and alerting;
+- routine restore tests;
+- documented RPO and RTO.
+
+Initial targets, pending business approval:
+
+- RPO: 15 minutes for transactional data;
+- RTO: 4 hours for full service restoration;
+- faster recovery for partial infrastructure failures where replicas exist.
+
+### 27.2 Restore Testing
+
+At least quarterly:
+
+1. restore PostgreSQL to an isolated environment;
+2. validate Flyway history;
+3. compare row counts and checksums for critical tables;
+4. verify object references;
+5. run smoke tests for login, catalog, playback, and entitlement checks;
+6. record actual recovery duration.
+
+## 28. Observability
+
+Monitor:
+
+- connection pool utilization;
+- transaction duration;
+- query latency percentiles;
+- deadlocks;
+- lock wait time;
+- replication lag;
+- cache hit ratios;
+- sequential scans on large tables;
+- index usage;
+- database size and growth;
+- outbox backlog;
+- worker queue age;
+- failed migrations;
+- backup freshness.
+
+Slow-query logging must redact parameters that may contain personal or secret information.
+
+## 29. Testing Strategy
+
+### 29.1 Migration Tests
+
+CI must:
+
+- start PostgreSQL through Testcontainers;
+- apply all migrations from zero;
+- validate Flyway checksums;
+- optionally migrate from a supported previous release snapshot;
+- run schema assertions.
+
+### 29.2 Repository Tests
+
+Use real PostgreSQL for:
+
+- partial indexes;
+- JSONB queries;
+- locking behavior;
+- unique constraints;
+- case-insensitive email uniqueness;
+- transaction rollback;
+- `SKIP LOCKED` workers;
+- optimistic locking.
+
+H2 is not accepted as a substitute for PostgreSQL integration tests.
+
+### 29.3 Constraint Tests
+
+Critical invariants must have tests proving that invalid direct inserts fail.
+
+Examples:
+
+- duplicate active email;
+- second default child profile;
+- invalid age range;
+- duplicate provider purchase event;
+- invalid progress percentage;
+- duplicate inbox message;
+- active premium entitlement conflict.
+
+## 30. Performance Validation Queries
+
+Representative queries must be benchmarked with realistic data volume:
+
+- child home feed by age, language, and access tier;
+- continue-listening list;
+- story detail with localization and assets;
+- unread notification count;
+- active entitlement lookup;
+- scheduled publication claiming;
+- pending notification delivery claiming;
+- outbox polling;
+- admin content review queue;
+- account support timeline.
+
+No query that can grow without bound may be exposed without pagination or an explicit limit.
+
+## 31. Extraction Readiness
+
+A bounded context is ready for database extraction when:
+
+- it owns all tables it writes;
+- cross-schema foreign keys have documented replacement strategies;
+- external modules do not query its internal tables;
+- integration events are versioned;
+- read models can be replicated or queried through APIs;
+- migration ownership is clear;
+- operational backup and recovery can be independent.
+
+Likely early extraction candidates:
+
+1. media processing;
+2. notifications;
+3. analytics;
+4. content delivery reads.
+
+Identity and billing extraction require especially careful consistency and security review.
+
+## 32. Implementation Order
+
+1. create schemas and database roles;
+2. create identity tables;
+3. create profiles and parent security settings;
+4. create catalog core and localization tables;
+5. create media metadata and processing tables;
+6. create playback and progress tables;
+7. create billing and entitlement tables;
+8. create notification tables;
+9. create outbox, inbox, and idempotency tables;
+10. create audit tables;
+11. introduce analytics tables only when event contracts are stable;
+12. add partitioning only when load or retention evidence justifies it.
+
+## 33. Database Review Checklist
+
+A schema change is ready when:
+
+- table ownership is documented;
+- names follow conventions;
+- required constraints exist;
+- foreign keys and extraction dependencies are understood;
+- query patterns and indexes are documented;
+- migration is backward compatible;
+- rollback or forward-fix strategy is defined;
+- personal-data impact is reviewed;
+- retention is defined;
+- integration tests use PostgreSQL;
+- operational metrics are available;
+- related API and architecture documents are updated.
+
+## 34. Related Documents
 
 - `Architecture_Principles.md`
 - `Software_Architecture.md`
 - `Backend_Architecture.md`
 - `API_Specification.md`
 - `Security_Architecture.md`
-- `Performance_Guidelines.md`
-- `Logging_Monitoring.md`
-- `Notifications.md`
+- `Event_Catalog.md`
+- `Error_Catalog.md`
+- `../00_Project/ADR/ADR-0002-postgresql-primary-system-of-record.md`
+- `../00_Project/ADR/ADR-0012-flyway-database-migrations.md`
