@@ -1,392 +1,254 @@
 # Software Architecture
 
-Version: 1.0.0  
+Version: 1.1.0  
 Status: Active Draft  
 Owner: Project Architecture  
 Last updated: 2026-07-14
 
 ## 1. Purpose
 
-This document describes the high-level software architecture of KidsAudioBookPlatform. It explains how the product is decomposed, how its major applications and backend capabilities collaborate, how data moves through the system, and how the architecture is expected to evolve.
+This document defines the software architecture of KidsAudioBookPlatform as a complete product system. It is the high-level source of truth for system boundaries, deployable units, bounded contexts, dependency direction, runtime collaboration, resilience, scalability, security boundaries, and evolution toward independently deployable services.
 
-This document is intentionally broader than `Backend_Architecture.md`. It covers the complete product system:
+It covers:
 
-- Flutter mobile application;
-- parent and child experiences;
-- administrative web dashboard;
-- backend platform;
-- media storage and delivery;
-- databases, cache, and messaging;
-- external integrations;
-- monitoring and operations;
-- security and privacy boundaries.
+- the Flutter mobile application;
+- the Child Experience and protected Parent Zone;
+- the administrative web dashboard;
+- backend applications and domain modules;
+- PostgreSQL, Redis, RabbitMQ, object storage, and CDN;
+- external providers for purchases, push notifications, and advertising;
+- operational tooling, security controls, and architecture governance.
 
-Detailed implementation conventions are documented in the specialized architecture files.
+Implementation-specific details belong in the specialized documents referenced throughout this file.
 
-## 2. Product Summary
+## 2. Product Context
 
-KidsAudioBookPlatform is a mobile-first storytelling platform for children, primarily ages 0–7. A parent creates the account and controls one or more child profiles. Children discover and listen to stories in a safe, calm interface, while parents manage profiles, preferences, subscriptions, downloads, notifications, and parental controls from a protected Parent Zone.
+KidsAudioBookPlatform is a mobile-first audio storytelling platform for children, initially focused on ages 0–7. Parents create accounts and control child profiles. Children use a safe, calm interface to discover and listen to stories, while parents manage profiles, subscriptions, downloads, notifications, and parental controls through a protected Parent Zone.
 
-The platform supports:
+The product supports narrated stories, synchronized text, multiple illustrations, series, episodes, categories, editorial collections, playback progress, ambient audio, a free tier, premium subscriptions, a three-day trial, offline downloads, carefully constrained advertising, persistent notifications, and administrative content operations.
 
-- narrated stories;
-- synchronized text;
-- multiple illustrations per story;
-- series and episodes;
-- categories and editorial collections;
-- playback progress and continue-listening;
-- free and premium plans;
-- a three-day premium trial;
-- offline downloads for premium users;
-- ambient sounds and white noise;
-- controlled advertising for eligible free users;
-- persistent notifications;
-- administrative content management;
-- user and subscription support;
-- offers, announcements, and discounts.
+The architecture must support future localization, author workflows, larger content catalogs, advanced recommendations, and service extraction without forcing premature distributed-system complexity into the MVP.
 
-The system must support future internationalization, author workflows, larger content volumes, and independent scaling without forcing premature complexity into the MVP.
+## 3. Architecture Principles
 
-## 3. Architectural Goals
+The platform follows these principles:
 
-The architecture must optimize for the following outcomes:
-
-1. **Safety** — child-facing functionality must remain isolated from sensitive parent and administrative capabilities.
-2. **Correctness** — subscriptions, entitlements, publishing, progress, and profile ownership must be deterministic and auditable.
-3. **Maintainability** — modules must have clear responsibilities and dependencies.
-4. **Operational clarity** — failures must be observable and diagnosable.
-5. **Evolution** — the MVP must not block later service extraction, internationalization, or additional content models.
-6. **Performance** — catalog browsing and playback startup must feel fast on real mobile networks.
-7. **Resilience** — media listening should remain usable even when non-critical capabilities degrade.
-8. **Security and privacy** — personal and child-related data must be minimized and protected by design.
+1. **Child safety is a system property.** It is enforced through navigation, authorization, data minimization, content workflow, and operational controls.
+2. **The server is authoritative.** Subscription status, entitlement decisions, profile ownership, publication state, and advertising eligibility are never trusted solely from the client.
+3. **Domain boundaries precede deployment boundaries.** Modules are designed as bounded contexts before they are extracted into separate services.
+4. **Start with a modular monolith.** Independent services are introduced only when scale, ownership, reliability, or release cadence justify them.
+5. **Media does not flow through application servers.** Audio and images are delivered through object storage and CDN using controlled URLs.
+6. **Asynchronous work is explicit.** Slow, retryable, or fan-out operations use messaging and workers.
+7. **Every privileged action is auditable.** Administrative and support actions produce immutable audit records.
+8. **Failures degrade safely.** Optional capabilities may fail without blocking core playback whenever possible.
+9. **Observability is part of the design.** Logs, metrics, traces, correlation IDs, and business events are defined with the feature.
+10. **Documentation and contracts are executable assets.** OpenAPI, database migrations, event schemas, and architecture tests must remain synchronized with implementation.
 
 ## 4. Architectural Drivers
 
-The most important drivers are:
-
 | Driver | Architectural consequence |
 |---|---|
-| Mobile-first experience | APIs must be bandwidth-aware, tolerant of unstable networks, and versioned |
-| Child safety | Child and Parent Zone capabilities require explicit authorization and navigation boundaries |
-| Audio-heavy product | Binary media must use object storage and CDN delivery rather than application servers |
-| Free and premium plans | Entitlement decisions require a dedicated authoritative model |
-| Offline premium listening | Download manifests, local asset management, revocation, and sync are first-class concerns |
-| Editorial content workflow | Draft, review, scheduled, published, and archived states must be modeled explicitly |
-| Multiple child profiles | Data and progress must be scoped by parent account and selected profile |
-| Admin operations | Privileged actions require dedicated authorization and immutable audit records |
-| Future growth | Bounded contexts must be defined before independent service deployment is necessary |
-| Small initial team | Operational complexity must remain proportional to real product needs |
+| Mobile-first use | APIs are bandwidth-aware, paginated, cacheable, and tolerant of intermittent connectivity |
+| Children as users | Strict separation between child-safe and parent-only capabilities |
+| Audio-heavy product | Object storage and CDN are mandatory for media distribution |
+| Free and premium tiers | Central entitlement model and provider-independent access decisions |
+| Offline listening | Download manifests, device association, revocation, and synchronization are first-class concerns |
+| Editorial publishing | Explicit draft, review, scheduled, published, suspended, and archived states |
+| Multiple profiles | Progress and recommendations are always scoped to a child profile |
+| Small initial team | Operational simplicity is prioritized over premature microservices |
+| Future growth | Clear bounded contexts and extractable adapters |
+| Compliance and trust | Data minimization, retention rules, auditability, and incident readiness |
 
-## 5. Architectural Approach
+## 5. Architecture Style
 
-The system uses a **modular, service-oriented architecture** with explicit bounded contexts.
+### 5.1 Initial deployment model
 
-The strategic direction allows independently deployable services, but the initial implementation should not create a separate deployment for every domain noun. Closely related capabilities may be deployed together as long as module boundaries and data ownership remain clear.
+The initial backend is a **modular monolith with asynchronous workers**. It may be deployed as:
 
-The recommended starting shape is a small number of deployable backend applications containing well-isolated modules, with later extraction based on evidence.
+- one consumer/admin API application;
+- one worker application;
+- PostgreSQL;
+- Redis;
+- RabbitMQ;
+- object storage;
+- observability services.
 
-This approach gives the project:
+The codebase remains modular even when modules share a process. Modules communicate through application interfaces or published domain events, never by directly accessing another module's internal repository or tables.
 
-- faster initial delivery;
-- simpler local development;
-- fewer distributed transactions;
-- lower infrastructure cost;
-- clear migration paths toward microservices;
-- less risk of a tightly coupled monolith.
+### 5.2 Evolution model
+
+A module may be extracted into an independent service when one or more of the following become true:
+
+- it requires independent scaling;
+- it has a different reliability target;
+- it changes at a significantly different rate;
+- it is owned by a separate team;
+- it needs independent deployment for risk reduction;
+- its workload is operationally distinct, such as media processing or notifications.
+
+Likely early extraction candidates are media processing, notifications, subscription reconciliation, search, and analytics.
+
+### 5.3 Rejected starting point
+
+The project does not begin with a service per domain noun. That would introduce distributed transactions, local-development friction, deployment overhead, monitoring burden, and contract-management cost before the product has evidence that those costs are justified.
 
 ## 6. System Context
 
 ```mermaid
 graph LR
-    Parent[Parent User]
-    Child[Child User]
+    Parent[Parent]
+    Child[Child]
     Admin[Administrator]
     Mobile[Flutter Mobile App]
     Dashboard[Admin Dashboard]
-    Platform[KidsAudioBook Backend Platform]
-    Storage[Object Storage]
-    CDN[Content Delivery Network]
-    Payment[App Store / Payment Providers]
-    Push[Push Notification Provider]
+    Platform[KidsAudioBook Platform]
+    Store[Apple App Store / Google Play]
+    Push[Push Provider]
     Ads[Child-appropriate Ad Provider]
-    Observability[Monitoring Platform]
+    CDN[CDN]
+    Storage[Object Storage]
+    Ops[Observability Platform]
 
     Parent --> Mobile
     Child --> Mobile
     Admin --> Dashboard
     Mobile --> Platform
     Dashboard --> Platform
+    Platform --> Store
+    Platform --> Push
+    Mobile --> Ads
     Platform --> Storage
     Storage --> CDN
     Mobile --> CDN
-    Platform --> Payment
-    Platform --> Push
-    Mobile --> Ads
-    Platform --> Observability
+    Platform --> Ops
 ```
 
-The parent and child may use the same physical device, but they do not operate under the same application permissions. The selected child profile controls child content and progress, while the authenticated parent account remains the security principal.
+The authenticated parent account is the security principal. A selected child profile is a scoped product context, not an independent login identity.
 
-## 7. Major Software Containers
+## 7. Container Architecture
 
 ```mermaid
 graph TB
-    subgraph Client Layer
-        Mobile[Flutter Mobile Application]
-        AdminUI[Administrative Web Dashboard]
+    subgraph Clients
+        Mobile[Flutter Mobile App]
+        AdminUI[Admin Web Dashboard]
     end
 
-    subgraph Edge Layer
-        Gateway[API Gateway / Edge Routing]
+    subgraph Edge
+        Gateway[API Gateway / Reverse Proxy]
     end
 
-    subgraph Application Layer
-        ConsumerAPI[Consumer Backend]
-        AdminAPI[Administrative Backend]
-        Workers[Background Workers]
+    subgraph Runtime
+        API[Backend API Application]
+        Worker[Background Worker Application]
     end
 
-    subgraph Data and Messaging
-        Postgres[(PostgreSQL)]
+    subgraph Data
+        PG[(PostgreSQL)]
         Redis[(Redis)]
-        Broker[(RabbitMQ)]
-        ObjectStore[(Object Storage)]
+        MQ[(RabbitMQ)]
+        Object[(Object Storage)]
     end
 
-    subgraph Delivery and Operations
+    subgraph Delivery
         CDN[CDN]
-        Metrics[Metrics / Logs / Traces]
+        FCM[Push Provider]
+        Stores[Store Purchase APIs]
     end
 
     Mobile --> Gateway
     AdminUI --> Gateway
-    Gateway --> ConsumerAPI
-    Gateway --> AdminAPI
-    ConsumerAPI --> Postgres
-    AdminAPI --> Postgres
-    ConsumerAPI --> Redis
-    AdminAPI --> Redis
-    ConsumerAPI --> Broker
-    AdminAPI --> Broker
-    Broker --> Workers
-    Workers --> Postgres
-    Workers --> ObjectStore
-    ObjectStore --> CDN
+    Gateway --> API
+    API --> PG
+    API --> Redis
+    API --> MQ
+    Worker --> MQ
+    Worker --> PG
+    Worker --> Object
+    Object --> CDN
     Mobile --> CDN
-    ConsumerAPI --> Metrics
-    AdminAPI --> Metrics
-    Workers --> Metrics
+    Worker --> FCM
+    API --> Stores
 ```
 
-### 7.1 Flutter Mobile Application
+### 7.1 Flutter mobile application
 
-The Flutter application contains two deliberately separated experiences:
+The application contains two deliberately separated navigation and authorization surfaces:
 
-- Child Experience;
-- Parent Zone.
+- **Child Experience** for discovery, playback, favorites, and profile-scoped history;
+- **Parent Zone** for profile management, subscriptions, downloads, preferences, and account operations.
 
-The application is responsible for presentation, local state, playback coordination, secure token storage, downloaded media management, and offline synchronization. It must not become the authority for subscription status, profile ownership, publication rules, or advertising eligibility.
+The application owns presentation, local state, secure token storage, media playback, ambient-audio mixing, local downloads, and offline synchronization. It does not own authoritative entitlement or ownership decisions.
 
-### 7.2 Administrative Dashboard
+### 7.2 Admin dashboard
 
-The admin dashboard supports content and platform operations. It is not a general-purpose consumer interface with hidden admin buttons. It uses privileged APIs and stricter authorization policies.
+The dashboard is a privileged operational product, not a consumer UI with hidden buttons. It uses dedicated routes, stricter authorization, detailed audit logging, and workflow-specific permissions.
 
-Primary capabilities include:
+### 7.3 Backend API application
 
-- story, series, episode, category, and collection management;
-- content preview and publication workflow;
-- user support;
-- subscription inspection and controlled overrides;
-- announcements, promotions, and discounts;
-- notification management;
-- audit-log review;
-- operational reporting.
+The API application exposes consumer and administrative APIs. Shared deployment does not imply shared authorization or shared module internals. Consumer and admin endpoints remain separated by route namespace, policy, rate limits, and tests.
 
-### 7.3 Consumer Backend
+### 7.4 Worker application
 
-The consumer backend exposes APIs used by the mobile application. It owns consumer-facing orchestration, authentication integration, profile-scoped reads, playback workflows, entitlement evaluation, and mobile-compatible response models.
+Workers process media, notifications, scheduled publication, subscription reconciliation, cleanup, retry queues, and analytics aggregation. All handlers must be idempotent and safe under redelivery.
 
-### 7.4 Administrative Backend
-
-The administrative backend exposes privileged workflows and may initially share a deployment with the consumer backend. Its modules, routes, authorization, rate limits, auditing, and testing remain separate.
-
-### 7.5 Background Workers
-
-Background workers process slow or asynchronous operations, such as:
-
-- media inspection and transformation;
-- notification delivery;
-- event consumption;
-- subscription reconciliation;
-- scheduled publication;
-- analytics aggregation;
-- cleanup and retention jobs;
-- download revocation propagation.
-
-Workers must be idempotent and retry-safe.
-
-## 8. Domain Decomposition
-
-The platform is divided into the following bounded contexts.
+## 8. Bounded Contexts
 
 ### 8.1 Identity and Access
 
-Responsibilities:
-
-- parent account registration;
-- login and logout;
-- access and refresh tokens;
-- session and device management;
-- password reset;
-- role assignment;
-- account suspension;
-- security event generation.
+Owns registration, login, access and refresh tokens, password reset, device sessions, account status, roles, and security events.
 
 ### 8.2 Profile Management
 
-Responsibilities:
-
-- child profile creation and editing;
-- avatar and display-name selection;
-- age-band settings;
-- content and playback preferences;
-- selected profile state;
-- parental settings;
-- profile deletion workflow.
+Owns child profiles, avatars, age bands, playback preferences, profile limits, parental controls, and profile deletion.
 
 ### 8.3 Content Catalog
 
-Responsibilities:
-
-- story metadata;
-- series and episode relationships;
-- categories and collections;
-- age recommendations;
-- languages;
-- editorial availability;
-- free and premium classification;
-- publication lifecycle;
-- search and discovery metadata.
+Owns stories, series, episodes, categories, collections, languages, age recommendations, content tier, discoverability, and publication state.
 
 ### 8.4 Media
 
-Responsibilities:
-
-- audio assets;
-- illustration assets;
-- synchronized text assets;
-- metadata and checksums;
-- processing status;
-- signed URL generation;
-- CDN delivery references;
-- asset lifecycle.
+Owns audio, illustration, synchronized-text assets, checksums, technical metadata, processing state, signed delivery URLs, and lifecycle cleanup.
 
 ### 8.5 Playback and Progress
 
-Responsibilities:
-
-- playback session creation;
-- progress checkpoints;
-- resume position;
-- completion state;
-- continue-listening queries;
-- history;
-- session eligibility for advertising rules.
+Owns playback sessions, checkpoints, resume positions, completion, listening history, and continue-listening projections.
 
 ### 8.6 Entitlements
 
-Responsibilities:
-
-- effective access to premium content;
-- feature eligibility;
-- trial eligibility;
-- offline eligibility;
-- ad-free eligibility;
-- entitlement expiry and revocation.
+Owns the effective answer to whether an account or profile may access a feature or content item. It combines subscription state, trial state, content tier, plan capabilities, and temporary administrative overrides.
 
 ### 8.7 Subscriptions and Billing
 
-Responsibilities:
-
-- subscription plans;
-- provider purchase references;
-- verification;
-- lifecycle state;
-- renewals and cancellations;
-- grace periods;
-- provider callbacks;
-- reconciliation;
-- billing audit history.
+Owns provider transactions, verification, subscription lifecycle, renewals, cancellations, grace periods, provider notifications, reconciliation, and billing audit history.
 
 ### 8.8 Downloads and Offline
 
-Responsibilities:
+Owns download manifests, device association, offline-license metadata, limits, synchronization, expiry, and revocation.
 
-- download manifests;
-- device association;
-- offline license metadata;
-- download status synchronization;
-- storage limits;
-- expiry and revocation.
+### 8.9 Notifications
 
-### 8.9 Ambient Audio
+Owns notification records, templates, targeting, preferences, delivery attempts, read state, and push dispatch.
 
-Responsibilities:
+### 8.10 Advertising Eligibility
 
-- ambient-sound catalog;
-- availability;
-- sound categories;
-- default volume recommendations;
-- mixing presets;
-- premium eligibility where applicable.
+Owns provider-independent ad policy, including free-tier eligibility, the two-session rule, premium exclusion, age-safe placement, and attempt tracking.
 
-Actual audio mixing is performed on the device.
+### 8.11 Administration and Audit
 
-### 8.10 Notifications
+Owns privileged workflows, support operations, role assignment, publication approvals, controlled subscription overrides, and immutable audit records.
 
-Responsibilities:
+## 9. Module Dependency Rules
 
-- persistent notification records;
-- targeting;
-- categories and templates;
-- push dispatch;
-- read and dismissal state;
-- user preferences;
-- delivery status.
-
-### 8.11 Advertising Eligibility
-
-Responsibilities:
-
-- free-user eligibility;
-- two-session frequency rule;
-- placement restrictions;
-- premium exclusion;
-- ad-attempt tracking;
-- provider-independent policy decisions.
-
-### 8.12 Administration and Audit
-
-Responsibilities:
-
-- privileged workflows;
-- support actions;
-- publication approvals;
-- subscription overrides;
-- administrative roles;
-- immutable audit records.
-
-## 9. Logical Dependency Direction
-
-Dependencies must flow inward toward domain logic.
+Dependencies flow inward:
 
 ```mermaid
 graph LR
-    Delivery[Delivery: REST / Messaging / UI]
+    Delivery[REST / Messaging Delivery]
     Application[Application Use Cases]
-    Domain[Domain Model and Rules]
-    Ports[Ports / Interfaces]
-    Adapters[Persistence and External Adapters]
+    Domain[Domain Model]
+    Ports[Ports]
+    Adapters[Persistence / Provider Adapters]
 
     Delivery --> Application
     Application --> Domain
@@ -394,558 +256,411 @@ graph LR
     Adapters --> Ports
 ```
 
-The domain must not depend on:
+Mandatory rules:
 
-- Spring MVC;
-- JPA entities;
-- RabbitMQ clients;
-- HTTP provider payloads;
-- Flutter UI widgets;
-- database-specific query APIs.
+- controllers call application use cases, not repositories;
+- domain objects do not depend on Spring, JPA, RabbitMQ, or provider SDKs;
+- JPA entities are persistence representations, not public API contracts;
+- one module may not import another module's persistence package;
+- cross-module reads use published application interfaces or dedicated read models;
+- cross-module writes use commands, domain services, or events;
+- package-private visibility is preferred for internal implementation types;
+- architecture tests must enforce forbidden dependencies.
 
-This does not require excessive abstraction for trivial code. It requires protection of meaningful business rules from technical coupling.
+Example package shape:
 
-## 10. Primary User Journeys
-
-### 10.1 Parent Registration and Profile Creation
-
-```mermaid
-sequenceDiagram
-    participant App as Mobile App
-    participant IAM as Identity
-    participant Profiles as Profile Management
-    participant Audit as Audit
-
-    App->>IAM: Register parent account
-    IAM-->>App: Authenticated session
-    App->>Profiles: Create child profile
-    Profiles->>Profiles: Validate account limits and profile data
-    Profiles->>Audit: Record profile creation
-    Profiles-->>App: Child profile
+```text
+com.kidsaudiobook
+  identity/
+    api/
+    application/
+    domain/
+    infrastructure/
+  catalog/
+    api/
+    application/
+    domain/
+    infrastructure/
+  playback/
+  entitlements/
+  subscriptions/
+  notifications/
 ```
 
-The parent account owns every child profile. Profile operations require server-side ownership validation.
+## 10. Communication Patterns
 
-### 10.2 Story Discovery and Playback
+### 10.1 Synchronous communication
+
+Use synchronous calls when the caller needs an immediate answer to continue the user request, such as:
+
+- validating credentials;
+- fetching story details;
+- evaluating entitlement;
+- starting playback;
+- updating progress;
+- reading notification state.
+
+Inside the modular monolith, these are in-process application-interface calls. After service extraction, the same conceptual contract may become HTTP or gRPC, but that is not assumed prematurely.
+
+### 10.2 Asynchronous communication
+
+Use RabbitMQ when work is slow, retryable, fan-out, or not required for the immediate response:
+
+- `StoryPublished`;
+- `MediaProcessingRequested`;
+- `SubscriptionActivated`;
+- `SubscriptionExpired`;
+- `NotificationCreated`;
+- `StoryCompleted`;
+- `ProfileDeleted`;
+- `OfflineLicenseRevoked`.
+
+Events use versioned envelopes:
+
+```json
+{
+  "eventId": "01J2...",
+  "eventType": "StoryPublished",
+  "eventVersion": 1,
+  "occurredAt": "2026-07-14T18:20:00Z",
+  "correlationId": "01J2...",
+  "producer": "catalog",
+  "payload": {
+    "storyId": "01J1...",
+    "language": "ro-RO"
+  }
+}
+```
+
+The transactional outbox pattern guarantees that database state and emitted events cannot diverge silently.
+
+## 11. Data Ownership
+
+Each bounded context owns its write model. Even when contexts share one PostgreSQL instance, ownership remains explicit through schemas, repository boundaries, and migration ownership.
+
+Rules:
+
+- no module writes another module's tables;
+- foreign keys across schemas are used only when ownership and lifecycle are stable;
+- reporting joins are read-only and isolated from transactional logic;
+- shared concepts are referenced by stable IDs, not duplicated mutable objects;
+- Redis is never the system of record;
+- object storage contains binary media, while PostgreSQL contains authoritative metadata;
+- deletion workflows must account for database records, cache entries, object assets, notifications, and audit retention.
+
+## 12. Primary Runtime Flows
+
+### 12.1 Story discovery and playback
 
 ```mermaid
 sequenceDiagram
     participant App as Mobile App
-    participant Catalog as Catalog API
-    participant Entitlements as Entitlement Module
-    participant Playback as Playback Module
+    participant Catalog as Catalog
+    participant Ent as Entitlements
+    participant Play as Playback
     participant CDN as CDN
 
     App->>Catalog: Get profile-scoped recommendations
-    Catalog->>Entitlements: Evaluate accessible content
-    Catalog-->>App: Story cards and access metadata
-    App->>Playback: Start playback session
-    Playback->>Entitlements: Validate access
-    Playback-->>App: Session and signed media references
+    Catalog->>Ent: Resolve access metadata
+    Ent-->>Catalog: Accessible / locked / trial eligible
+    Catalog-->>App: Story cards
+    App->>Play: Start playback
+    Play->>Ent: Authorize story access
+    Ent-->>Play: Allowed
+    Play-->>App: Session + signed media manifest
     App->>CDN: Stream audio and illustrations
-    App->>Playback: Submit progress checkpoints
+    App->>Play: Send progress checkpoints
 ```
 
-The app may cache catalog responses, but server authorization remains authoritative before protected playback begins.
-
-### 10.3 Premium Purchase Verification
+### 12.2 Premium purchase reconciliation
 
 ```mermaid
 sequenceDiagram
     participant App as Mobile App
-    participant Billing as Billing Module
-    participant Provider as Store Provider
-    participant Entitlements as Entitlement Module
-    participant Broker as Message Broker
+    participant Sub as Subscription Module
+    participant Store as Store Provider
+    participant Ent as Entitlements
+    participant MQ as RabbitMQ
 
-    App->>Billing: Submit purchase proof
-    Billing->>Provider: Verify purchase
-    Provider-->>Billing: Verified subscription data
-    Billing->>Billing: Persist idempotent state transition
-    Billing->>Broker: SubscriptionActivated
-    Broker->>Entitlements: Consume event
-    Entitlements->>Entitlements: Grant premium access
-    Billing-->>App: Current subscription state
+    App->>Sub: Submit purchase token
+    Sub->>Store: Verify purchase
+    Store-->>Sub: Verified subscription state
+    Sub->>Sub: Persist provider transaction
+    Sub->>MQ: Publish SubscriptionActivated
+    MQ->>Ent: Recalculate entitlements
+    Ent-->>App: Premium access available
 ```
 
-The client never grants itself premium access based solely on a local purchase callback.
-
-### 10.4 Content Publication
+### 12.3 Content publication
 
 ```mermaid
 sequenceDiagram
     participant Admin as Admin Dashboard
-    participant AdminAPI as Admin API
-    participant Catalog as Catalog Module
+    participant Catalog as Catalog Admin API
     participant Media as Media Module
-    participant Broker as Message Broker
+    participant Audit as Audit Module
+    participant MQ as RabbitMQ
 
-    Admin->>AdminAPI: Request story publication
-    AdminAPI->>Catalog: Validate transition
-    Catalog->>Media: Confirm required assets ready
-    Media-->>Catalog: Asset readiness
-    Catalog->>Catalog: Publish atomically
-    Catalog->>Broker: StoryPublished
-    AdminAPI-->>Admin: Publication result
+    Admin->>Catalog: Request publication
+    Catalog->>Media: Validate required assets
+    Media-->>Catalog: Assets ready
+    Catalog->>Catalog: Validate metadata and workflow state
+    Catalog->>Audit: Record approval and publication
+    Catalog->>MQ: Publish StoryPublished
+    Catalog-->>Admin: Published story
 ```
 
-Publication must fail when required audio, text, illustrations, metadata, or review conditions are incomplete.
+## 13. Media Architecture
 
-## 11. Communication Patterns
+Media upload and delivery are separated.
 
-### 11.1 Client-to-Backend
+### Upload path
 
-Mobile and dashboard communication uses HTTPS and versioned REST APIs.
+1. Admin requests an upload session.
+2. Backend validates intended type and creates a restricted pre-signed upload URL.
+3. Client uploads directly to object storage.
+4. A worker validates file signature, size, duration, dimensions, malware status, and checksum.
+5. Derived assets are generated where needed.
+6. Asset state changes from `UPLOADED` to `PROCESSING`, then `READY` or `REJECTED`.
 
-API responses should be optimized for their consuming application rather than exposing raw persistence structures.
+### Delivery path
 
-### 11.2 Internal Synchronous Communication
+1. Mobile requests a playback or download manifest.
+2. Backend validates publication and entitlement.
+3. Backend returns short-lived CDN URLs or signed cookies.
+4. Mobile streams directly from the CDN.
 
-Within one deployment, modules should communicate through application interfaces rather than HTTP calls.
+Application servers never proxy large audio files in normal operation.
 
-Across deployments, synchronous HTTP is allowed only when the caller requires an immediate answer.
+## 14. Offline Architecture
 
-Long synchronous service chains are discouraged because they amplify latency and failure probability.
+Offline support uses a manifest model rather than arbitrary local copies.
 
-### 11.3 Internal Asynchronous Communication
+A manifest contains:
 
-RabbitMQ is used for business events and background work where eventual consistency is acceptable.
-
-The transactional outbox pattern protects reliable event publication after database commits.
-
-### 11.4 External Integrations
-
-Each external provider is isolated behind an adapter. Provider-specific payloads do not become domain models.
-
-Initial integration categories include:
-
-- App Store and payment providers;
-- push notification services;
-- advertisement providers;
-- email delivery;
-- object storage;
-- optional analytics services.
-
-## 12. Data Architecture
-
-PostgreSQL is the primary system of record.
-
-Redis supports caching, idempotency, selected distributed coordination, and rate-limiting data.
-
-RabbitMQ carries asynchronous messages.
-
-S3-compatible object storage contains audio, images, and generated media assets.
-
-A CDN delivers large assets efficiently.
-
-```mermaid
-graph LR
-    Services[Backend Modules / Services]
-    DB[(PostgreSQL)]
-    Cache[(Redis)]
-    MQ[(RabbitMQ)]
-    Storage[(Object Storage)]
-    CDN[CDN]
-
-    Services --> DB
-    Services --> Cache
-    Services --> MQ
-    Services --> Storage
-    Storage --> CDN
-```
-
-Each context owns its data. Even when contexts share one physical PostgreSQL instance initially, tables and migration ownership must remain separated by module or schema.
-
-## 13. Catalog Read Model
-
-Catalog browsing is read-heavy. Mobile responses may require data from stories, categories, collections, entitlements, and profile preferences.
-
-The architecture should avoid issuing a large number of cross-module calls for every home-screen request.
-
-Recommended approach:
-
-- maintain optimized catalog queries or read models;
-- cache public and slowly changing catalog metadata;
-- apply profile and entitlement rules in a controlled orchestration layer;
-- invalidate or refresh caches after publication events;
-- paginate large collections;
-- precompute selected editorial sections when justified.
-
-The write model remains authoritative for publication and content integrity.
-
-## 14. Media Architecture
-
-The application backend does not stream large audio files byte-by-byte under normal operation.
-
-The expected flow is:
-
-1. admin uploads source media through a controlled upload flow;
-2. media enters quarantine;
-3. validation and scanning run;
-4. background processing creates delivery variants if required;
-5. metadata and checksum are persisted;
-6. the asset becomes eligible for editorial use;
-7. an authorized playback request receives a short-lived media reference;
-8. the mobile app streams or downloads from the CDN.
-
-This architecture protects backend capacity and improves global media performance.
-
-## 15. Offline Architecture
-
-Offline listening is not simply a cached network response.
-
-The system requires:
-
-- premium entitlement verification;
-- a server-issued download manifest;
-- device-scoped local records;
+- story and asset identifiers;
 - checksums;
-- resumable download support where practical;
-- storage quota handling;
-- expiry and revocation policy;
-- local encrypted or platform-protected storage;
-- progress synchronization after reconnect;
-- logout and account-switch cleanup rules.
+- expected sizes;
+- version information;
+- entitlement expiry;
+- revocation metadata;
+- synchronization cursor.
 
-The mobile app may continue playback temporarily while offline according to a valid local manifest. The server reconciles entitlement and progress when connectivity returns.
+The client stores encrypted local metadata and validates checksums after download. Progress changes are queued locally and synchronized with idempotency keys. Server state wins for entitlement and revocation; progress conflict resolution favors the furthest valid playback position unless a newer explicit reset exists.
 
-## 16. Security Boundaries
+## 15. Security Boundaries
 
-The major trust boundaries are:
+### 15.1 Child and Parent Zone boundary
 
-```mermaid
-graph TB
-    PublicNetwork[Public Network]
-    Mobile[Mobile App - Untrusted Client]
-    AdminBrowser[Admin Browser - Untrusted Client]
-    Edge[Edge / Gateway]
-    Consumer[Consumer APIs]
-    Admin[Admin APIs]
-    Internal[Internal Workers and Modules]
-    Data[Databases and Storage]
-    Providers[External Providers]
+Entering Parent Zone requires explicit local re-authentication through biometrics or PIN fallback. That local check unlocks navigation but does not replace server authorization.
 
-    Mobile --> PublicNetwork --> Edge
-    AdminBrowser --> PublicNetwork --> Edge
-    Edge --> Consumer
-    Edge --> Admin
-    Consumer --> Internal
-    Admin --> Internal
-    Internal --> Data
-    Internal --> Providers
-```
+### 15.2 Consumer and administrative boundary
 
-Clients are untrusted even when they are official applications. Every sensitive decision is revalidated by the backend.
+Administrative APIs use separate roles, route namespaces, stricter token policies, lower rate limits, and mandatory audit logs. Admin privileges are never inferred from UI state.
 
-Administrative access uses stronger controls than consumer access and must always produce audit records for high-impact actions.
+### 15.3 Media boundary
 
-## 17. Authorization Model
+Private source assets remain inaccessible. Delivery uses short-lived signed access through CDN. Upload URLs are scoped to one object key, content type, and expiration.
 
-The authenticated principal is the parent account or an administrative user.
+### 15.4 Trust boundaries
 
-Authorization decisions combine:
+Provider callbacks, purchase receipts, push tokens, and ad-provider responses are untrusted external input and require validation, replay protection, and observability.
 
-- platform role;
-- account ownership;
-- child-profile ownership;
-- subscription entitlement;
-- resource state;
-- administrative permission;
-- recent parent verification where needed.
+## 16. Resilience and Failure Handling
 
-Examples:
-
-- a parent may update only profiles owned by that account;
-- a child-profile-scoped request may access only content allowed by that profile and entitlement;
-- only authorized editors may modify draft content;
-- only publishers may publish;
-- support roles may inspect limited user data but not change billing state unless separately authorized.
-
-## 18. Reliability and Failure Isolation
-
-The system must classify dependencies as core or optional.
-
-Core dependencies include:
-
-- identity data;
-- catalog data;
-- entitlement evaluation;
-- playback-session persistence for online protected playback.
-
-Optional or degradable dependencies may include:
-
-- recommendations;
-- marketing notifications;
-- analytics;
-- advertisements;
-- selected dashboard reports.
-
-Examples of graceful degradation:
-
-- if recommendations fail, show cached editorial collections;
-- if analytics fails, do not block playback;
-- if push delivery fails, preserve the in-app notification;
-- if ad delivery fails, do not trap the user or interrupt the story;
-- if ambient catalog refresh fails, use locally cached ambient sounds.
-
-## 19. Observability Architecture
-
-All backend deployments emit:
-
-- structured logs;
-- metrics;
-- traces;
-- health information;
-- audit events where required.
-
-Correlation IDs propagate through HTTP requests, internal calls, and asynchronous messages.
-
-The observability platform must allow operators to connect a mobile-visible error to the responsible backend request and dependency.
-
-Key dashboards should cover:
-
-- API latency and errors;
-- login failures;
-- playback session creation;
-- media authorization;
-- subscription verification;
-- entitlement propagation;
-- queue depth;
-- dead-letter messages;
-- notification delivery;
-- publication failures;
-- database and cache health.
-
-## 20. Deployment Topology
-
-The exact hosting provider remains an ADR decision. The logical deployment model is:
-
-```mermaid
-graph TB
-    Internet[Internet]
-    CDN[CDN / Edge]
-    Gateway[Load Balancer / API Gateway]
-    API1[Backend Instance 1]
-    API2[Backend Instance 2]
-    Worker1[Worker Instance]
-    DB[(Managed PostgreSQL)]
-    Redis[(Managed Redis)]
-    MQ[(RabbitMQ)]
-    Store[(Object Storage)]
-
-    Internet --> CDN
-    Internet --> Gateway
-    Gateway --> API1
-    Gateway --> API2
-    API1 --> DB
-    API2 --> DB
-    API1 --> Redis
-    API2 --> Redis
-    API1 --> MQ
-    API2 --> MQ
-    MQ --> Worker1
-    Worker1 --> DB
-    Worker1 --> Store
-    Store --> CDN
-```
-
-Backend instances are stateless and horizontally scalable. Persistent state lives in managed data services.
-
-## 21. Environment Strategy
-
-The expected environments are:
-
-| Environment | Purpose |
+| Dependency failure | Required behavior |
 |---|---|
-| Local | Developer workstation and Docker-based dependencies |
-| Test/CI | Automated tests and ephemeral validation |
-| Development | Integrated team testing |
-| Staging | Production-like acceptance and release validation |
-| Production | Live customer environment |
+| Redis unavailable | Fall back to PostgreSQL where safe; disable non-essential cache-dependent optimizations |
+| RabbitMQ unavailable | Persist outbox records and retry publishing; do not lose business transactions |
+| Push provider unavailable | Queue and retry notifications; in-app records remain available |
+| CDN transient failure | Retry with bounded backoff; allow downloaded content to continue |
+| Store verification unavailable | Keep purchase pending; never grant permanent entitlement without verification |
+| Ad provider unavailable | Skip the ad; never block story playback |
+| Recommendation failure | Fall back to editorial and recently used collections |
+| Analytics failure | Drop or buffer non-critical telemetry without failing user requests |
 
-Environment differences must be configuration-based, not implemented through different code branches.
+Circuit breakers, timeouts, bounded retries, bulkheads, and dead-letter queues are applied at external boundaries. Retries must not multiply side effects.
 
-Production data must not be copied into lower environments without controlled anonymization.
+## 17. Caching Strategy
 
-## 22. Scalability Model
+Redis is used for:
 
-The architecture initially scales through:
+- catalog and editorial projections;
+- short-lived entitlement snapshots;
+- rate limiting;
+- distributed locks for narrowly defined jobs;
+- idempotency response storage;
+- session and revocation metadata where required.
 
-- stateless API replicas;
-- CDN media delivery;
-- asynchronous worker scaling;
-- database indexing;
-- Redis caching;
-- efficient pagination;
-- optimized read models;
-- queue-based load leveling.
-
-Independent service extraction is considered when one context has significantly different scaling, deployment, security, or ownership needs.
-
-Likely future extraction candidates include:
-
-- media processing;
-- notifications;
-- subscription and billing integration;
-- analytics processing;
-- search and recommendation capabilities.
-
-## 23. Evolution Stages
-
-### Stage 1 — Architecture Foundation
-
-- establish module boundaries;
-- define contracts;
-- create shared engineering standards;
-- build local Docker environment;
-- implement authentication, profiles, catalog, and basic playback;
-- keep deployment count low.
-
-### Stage 2 — MVP Production Readiness
-
-- subscriptions and entitlements;
-- media pipeline and CDN;
-- admin publication workflow;
-- notifications;
-- observability;
-- security hardening;
-- backup and recovery.
-
-### Stage 3 — Growth
-
-- offline downloads;
-- richer recommendations;
-- localization;
-- advanced campaign management;
-- independent worker scaling;
-- selective service extraction.
-
-### Stage 4 — Platform Expansion
-
-- author workflows;
-- additional content formats;
-- partner integrations;
-- broader age ranges;
-- regional deployment;
-- advanced analytics and personalization under strict privacy rules.
-
-## 24. Architecture Risks
-
-| Risk | Mitigation |
-|---|---|
-| Premature microservice fragmentation | Start with explicit modules and extract based on evidence |
-| Coupled shared database | Enforce ownership by schema/module and prohibit cross-context writes |
-| Mobile/backend contract drift | OpenAPI-first contracts and compatibility checks |
-| Subscription inconsistency | Internal state machine, idempotent callbacks, reconciliation jobs |
-| Slow playback startup | CDN, signed media references, small metadata payloads, monitoring |
-| Unsafe admin capabilities | Separate policies, least privilege, audit records, controlled workflows |
-| Excessive personal data collection | Data minimization and field-level purpose documentation |
-| Offline entitlement abuse | Device manifests, expiry, revocation, secure storage |
-| Event loss | Transactional outbox and monitored consumers |
-| Documentation drift | Documentation updates included in definition of done |
-
-## 25. Initial Deployable Units
-
-A pragmatic initial deployment may contain:
-
-1. **platform-api** — consumer and administrative HTTP APIs, with module separation;
-2. **platform-worker** — background jobs and message consumers;
-3. **admin-dashboard** — administrative web application;
-4. **mobile-app** — Flutter iOS and Android application.
-
-Infrastructure components:
-
-- PostgreSQL;
-- Redis;
-- RabbitMQ;
-- S3-compatible object storage;
-- CDN;
-- monitoring stack.
-
-This topology is an initial recommendation, not a prohibition against future service extraction.
-
-## 26. Source-Code Organization Direction
-
-The repository may organize backend code by bounded context rather than horizontal technical folders.
-
-Illustrative structure:
+Cache keys are versioned and namespaced:
 
 ```text
-backend/
-  platform-api/
-  platform-worker/
-  modules/
-    identity/
-    profiles/
-    catalog/
-    media/
-    playback/
-    entitlements/
-    subscriptions/
-    notifications/
-    administration/
-  shared/
-    observability/
-    security-support/
-    test-support/
+catalog:v1:story:{storyId}:{locale}
+entitlement:v1:account:{accountId}
+profile:v1:home:{profileId}:{locale}
 ```
 
-The `shared` area must remain small and technical. Shared business models often indicate missing ownership and should not become a dependency shortcut.
+Cache invalidation is driven by successful writes and domain events. Correctness must not depend on cache presence.
 
-## 27. Related Documents
+## 18. Scalability Model
 
-This document must be read together with:
+The first scaling strategy is horizontal stateless API replication. State remains in PostgreSQL, Redis, RabbitMQ, and object storage.
 
-- `Architecture_Principles.md`;
-- `Backend_Architecture.md`;
-- `Mobile_Architecture.md`;
-- `Admin_Dashboard.md`;
-- `Database_Design.md`;
-- `API_Specification.md`;
-- `Security_Architecture.md`;
-- `Performance_Guidelines.md`;
-- `Logging_Monitoring.md`;
-- `Notifications.md`;
-- Architecture Decision Records under `00_Project/ADR`.
+Scaling priorities:
 
-## 28. Open Decisions
+1. CDN offload for media;
+2. database indexes and query tuning;
+3. caching of high-read projections;
+4. asynchronous workers for slow tasks;
+5. horizontal API and worker replicas;
+6. read replicas for reporting and heavy catalog reads;
+7. service extraction only when operational evidence supports it.
 
-The following decisions require future ADRs or validation:
+Partitioning is considered for high-volume append-only tables such as playback events, notification attempts, audit records, and provider webhook history.
 
-- exact Spring Boot version and dependency baseline;
-- modular monolith framework usage versus plain Java module boundaries;
-- hosting provider;
-- managed RabbitMQ provider or alternative broker;
-- identity implementation versus external identity provider;
-- exact object-storage and CDN provider;
-- admin frontend framework;
-- subscription providers and store-verification libraries;
-- search implementation for the first production release;
-- production secrets-management platform;
-- observability vendor or self-hosted stack.
+## 19. Observability
 
-Until decided, implementation must depend on internal abstractions rather than provider-specific assumptions.
+Every request and event carries a correlation ID. Structured logs include:
 
-## 29. Architecture Acceptance Criteria
+- timestamp;
+- severity;
+- service and module;
+- trace and correlation IDs;
+- actor type and anonymized actor ID;
+- operation;
+- outcome;
+- duration;
+- error code.
 
-The software architecture is being followed when:
+Sensitive values, access tokens, refresh tokens, passwords, PINs, purchase receipts, and raw child data are never logged.
 
-- every feature has a clear owning context;
-- domain rules are not implemented in controllers or clients;
-- modules do not write each other's data;
-- protected media access is server-authorized;
-- subscription and entitlement states are explicit;
-- administrative actions are audited;
-- child and parent experiences remain separated;
-- errors, metrics, and traces are consistent;
-- asynchronous workflows are idempotent;
-- documentation and code remain aligned;
-- deployment complexity grows only when justified.
+Key service-level indicators include:
 
-## 30. Conclusion
+- API latency and error rate;
+- playback-start success rate;
+- media-manifest latency;
+- subscription verification success;
+- event age and dead-letter count;
+- push-delivery success;
+- cache hit ratio;
+- database connection saturation;
+- worker backlog;
+- offline synchronization failures.
 
-KidsAudioBookPlatform should begin as a well-structured product platform, not as either an accidental monolith or an over-engineered distributed system.
+## 20. Deployment Architecture
 
-The central architectural strategy is to establish strong domain boundaries, keep the initial deployment practical, protect child safety and parent control, move media delivery to purpose-built infrastructure, and preserve clear paths for future scaling.
+Environments:
 
-The architecture succeeds when the team can add features quickly without weakening safety, correctness, or coherence.
+- local development with Docker Compose;
+- shared development;
+- staging;
+- production.
+
+Production deployments use immutable container images, environment-specific configuration, secret injection, health probes, migration gates, rolling deployment, and rollback procedures.
+
+Database migrations run as a controlled deployment step. Application instances do not independently race to apply migrations at startup.
+
+## 21. Testing Architecture
+
+The quality model includes:
+
+- domain unit tests;
+- application-service tests;
+- repository integration tests with Testcontainers;
+- API contract tests;
+- architecture dependency tests;
+- event schema and consumer tests;
+- provider adapter tests with WireMock or provider sandboxes;
+- end-to-end tests for critical journeys;
+- load tests for catalog, playback start, and progress updates;
+- security tests for authentication, authorization, rate limits, and upload validation.
+
+Critical journeys include registration, profile creation, story playback, progress resume, premium purchase, offline download, publication, and account deletion.
+
+## 22. Architecture Governance
+
+Architecture decisions are recorded in `docs/00_Project/ADR/`.
+
+A change requires an ADR when it introduces or replaces:
+
+- a major framework or datastore;
+- a new communication style;
+- a cross-cutting security rule;
+- a new deployment boundary;
+- a new source of truth;
+- a backward-incompatible contract strategy.
+
+Pull requests that alter architecture must update the relevant document, diagrams, OpenAPI, event catalog, error catalog, and implementation roadmap.
+
+## 23. Service Extraction Playbook
+
+When extracting a module:
+
+1. confirm a measurable reason;
+2. identify owned tables and events;
+3. introduce an explicit module API if one does not exist;
+4. remove direct cross-module persistence access;
+5. add contract tests;
+6. replicate data through events where needed;
+7. move tables or introduce a dedicated schema/database;
+8. deploy behind stable routing;
+9. compare behavior and metrics;
+10. remove the old in-process path only after verification.
+
+A service extraction is complete only when ownership, operations, data recovery, alerting, and on-call responsibility are clear.
+
+## 24. Quality Attribute Scenarios
+
+### Availability
+
+When the ad provider is unavailable during a free user's eligible ad moment, playback must continue without an ad and the failure must be recorded without exposing an error to the child.
+
+### Performance
+
+For a cached catalog request under normal load, the platform should return the first page within the defined mobile API latency SLO, excluding client network time.
+
+### Security
+
+When a child attempts to reach Parent Zone without successful local verification, no parent-only screen or sensitive data may be exposed.
+
+### Recoverability
+
+When RabbitMQ is unavailable after a successful subscription transaction, the outbox record must remain pending and publish automatically after recovery without duplicating entitlement grants.
+
+### Maintainability
+
+A developer adding a new notification type should modify the notification module, event catalog, template registry, and tests without changing unrelated catalog or playback internals.
+
+## 25. Related Documents
+
+- `Architecture_Principles.md`
+- `Backend_Architecture.md`
+- `Mobile_Architecture.md`
+- `Admin_Dashboard.md`
+- `Database_Design.md`
+- `API_Specification.md`
+- `Security_Architecture.md`
+- `Performance_Guidelines.md`
+- `Logging_Monitoring.md`
+- `Notifications.md`
+- `Technology_Stack.md`
+- `System_Flows.md`
+- `Event_Catalog.md`
+- `Error_Catalog.md`
+- `Implementation_Roadmap.md`
+- `C4_Model/README.md`
+
+## 26. Definition of Architectural Completion
+
+A major capability is architecturally ready for implementation when:
+
+- its bounded context and owner are clear;
+- APIs and events are documented;
+- source-of-truth data is identified;
+- authorization rules are explicit;
+- failure behavior is defined;
+- observability and audit requirements are specified;
+- migration and compatibility strategy are known;
+- tests are listed;
+- diagrams and related documents are updated;
+- no unresolved contradiction remains between architecture documents.
