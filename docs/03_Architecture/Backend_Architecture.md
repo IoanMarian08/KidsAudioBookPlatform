@@ -1,220 +1,199 @@
 # Backend Architecture
 
-Version: 1.0.0  
-Status: Draft for implementation  
+Version: 1.1.0  
+Status: Active Draft  
 Owner: Architecture  
 Last updated: 2026-07-14
 
 ## 1. Purpose
 
-This document defines the backend architecture for KidsAudioBookPlatform. It translates the product vision and high-level software architecture into implementation rules for the Java and Spring Boot backend.
+This document defines the implementation architecture of the KidsAudioBookPlatform backend. It converts the product vision and high-level software architecture into concrete Java 21 and Spring Boot rules that must be followed by human developers, reviewers, QA engineers, DevOps engineers, and AI coding agents.
 
-The intended audience is backend developers, reviewers, DevOps engineers, QA engineers and AI coding agents working in the repository. The document is prescriptive: where it uses **must**, the rule is mandatory unless an Architecture Decision Record explicitly replaces it.
+The backend must support:
 
-The backend must support a child-first mobile experience, a protected parent experience, content administration, subscriptions, offline listening, persisted notifications, analytics and future expansion toward author tooling without exposing unnecessary complexity in the first release.
+- parent registration, login, account recovery, sessions, and device management;
+- protected Parent Zone actions;
+- child profiles and profile-specific preferences;
+- stories, series, episodes, categories, collections, and ambient audio;
+- synchronized text, illustrations, and audio metadata;
+- playback sessions, favorites, progress, history, and continue listening;
+- free, trial, and premium entitlements;
+- offline downloads for eligible users;
+- controlled advertising for free users;
+- persistent in-app notifications and push delivery;
+- content administration, publishing, moderation, and support operations;
+- auditability, observability, resilience, and future service extraction.
 
-## 2. Architectural goals
+Where this document uses **must**, the rule is mandatory unless an accepted Architecture Decision Record explicitly replaces it.
 
-The backend is designed to achieve the following goals:
+## 2. Architectural style
 
-1. Clear domain ownership and low coupling between business capabilities.
-2. Secure handling of parent accounts, child profiles and administrative operations.
-3. Reliable playback and content delivery even under unstable mobile connectivity.
-4. Independent evolution of content, identity, subscription and notification capabilities.
-5. Strong observability through structured logs, metrics, traces and audit records.
-6. Predictable APIs suitable for Flutter, the admin dashboard and future clients.
-7. Safe incremental delivery without requiring a distributed system from day one.
-8. A migration path from a modular monolith to separately deployable services where justified.
-9. High testability and explicit business rules.
-10. Operational simplicity for the MVP.
+The initial backend is a **modular monolith with strict bounded contexts**. It is not an unstructured monolith, and it is not a distributed microservice system on day one.
 
-## 3. Recommended implementation strategy
+The architecture combines:
 
-The target architecture is service-oriented, but the initial implementation should be a **modular monolith with strict bounded contexts**, packaged so that selected modules can later become independent microservices.
+- domain-driven design for business boundaries;
+- clean and hexagonal architecture for dependency direction;
+- package-by-feature organization;
+- REST for synchronous client-facing operations;
+- RabbitMQ for asynchronous cross-module work;
+- PostgreSQL as the system of record;
+- Redis for cache, coordination, and selected short-lived state;
+- S3-compatible object storage for binary media;
+- explicit contracts that allow later extraction into microservices.
 
-This is an intentional decision. Starting with many independently deployed services would introduce network failures, distributed transactions, service discovery, duplicated infrastructure and operational overhead before the product has validated its usage patterns.
+The deployment model may evolve without changing the conceptual ownership of modules.
 
-The modular monolith must not become an unstructured monolith. Each domain module owns its application services, domain model, persistence adapters and public contracts. Direct access to another module's repositories or internal entities is forbidden.
+```mermaid
+graph LR
+    Mobile[Flutter Mobile App]
+    Admin[Admin Dashboard]
+    Edge[API Gateway]
+    Backend[Spring Boot Modular Backend]
+    Workers[Background Workers]
+    DB[(PostgreSQL)]
+    Cache[(Redis)]
+    Broker[(RabbitMQ)]
+    Storage[(Object Storage)]
+    CDN[CDN]
 
-The recommended evolution is:
+    Mobile --> Edge
+    Admin --> Edge
+    Edge --> Backend
+    Backend --> DB
+    Backend --> Cache
+    Backend --> Broker
+    Broker --> Workers
+    Workers --> DB
+    Workers --> Storage
+    Storage --> CDN
+    Mobile --> CDN
+```
 
-| Stage | Deployment model | Main objective |
-|---|---|---|
-| MVP | One Spring Boot deployment, one PostgreSQL cluster, Redis, object storage | Deliver product safely and quickly |
-| Growth | Extract media/content delivery and notifications where load requires it | Isolate scaling and operational concerns |
-| Scale | Extract identity, subscription and analytics only when organizational or scaling evidence exists | Independent ownership and release cycles |
+## 3. Core backend principles
+
+### 3.1 Domain ownership
+
+Every business concept has exactly one owning module. Other modules may use public application contracts, public events, or dedicated read models, but they must not access another module's repositories, JPA entities, or internal packages.
+
+### 3.2 Dependency direction
+
+Dependencies flow inward:
+
+```text
+API / Messaging / Schedulers
+            ↓
+      Application layer
+            ↓
+        Domain layer
+
+Infrastructure adapters → application/domain ports
+```
+
+The domain layer must not import Spring MVC, JPA, RabbitMQ, Redis, HTTP SDKs, or provider-specific types.
+
+### 3.3 Business rules are server-side
+
+The mobile app and admin dashboard are never the authority for:
+
+- premium access;
+- profile ownership;
+- trial eligibility;
+- publication visibility;
+- advertisement frequency;
+- offline entitlement;
+- subscription status;
+- administrative permissions.
+
+Clients may display decisions returned by the backend, but they must not make authoritative decisions independently.
+
+### 3.4 Explicit boundaries over convenience
+
+A short-term convenience that bypasses a module boundary is not acceptable. Cross-module coupling must use a public contract, event, or dedicated query port.
+
+### 3.5 Operational simplicity
+
+The architecture must remain proportionate to the size of the product and team. New infrastructure must solve a measurable problem and be documented through an ADR.
 
 ## 4. Technology baseline
 
-The backend baseline is:
+The approved baseline is:
 
-- Java 21
-- Spring Boot 3.x
-- Maven
-- Spring Web MVC for synchronous HTTP APIs
-- Spring Security
-- Spring Data JPA
-- PostgreSQL
-- Flyway for database migrations
-- Redis for caching, rate-limit coordination and short-lived state
-- RabbitMQ for asynchronous domain and integration events
-- S3-compatible object storage for audio, images and downloadable packages
-- OpenAPI 3 for API documentation
-- Micrometer for metrics
-- OpenTelemetry-compatible tracing
-- Testcontainers for integration tests
-- JUnit 5, AssertJ and Mockito
+| Area | Technology |
+|---|---|
+| Language | Java 21 |
+| Framework | Spring Boot 3.x |
+| Build | Maven |
+| HTTP | Spring Web MVC |
+| Security | Spring Security |
+| Persistence | Spring Data JPA and PostgreSQL |
+| Migrations | Flyway |
+| Cache | Redis |
+| Messaging | RabbitMQ |
+| Binary media | S3-compatible object storage |
+| API contract | OpenAPI 3 |
+| Metrics | Micrometer and Prometheus |
+| Tracing | OpenTelemetry-compatible tracing |
+| Logs | Structured JSON logs, Loki-compatible |
+| Tests | JUnit 5, AssertJ, Mockito, Testcontainers, WireMock |
 
-New infrastructure dependencies require an ADR and a measurable use case.
-
-## 5. Backend bounded contexts
+## 5. Bounded contexts
 
 ### 5.1 Identity and Access
 
-Responsibilities:
+Owns parent accounts, credentials, sessions, refresh tokens, device sessions, account status, roles, permissions, password recovery, email verification, and Parent Zone security metadata.
 
-- Parent account registration and authentication
-- Email verification and password recovery
-- Access and refresh token lifecycle
-- Role and permission evaluation
-- Parent-zone PIN metadata and verification flow
-- Device and session management
-- Administrative identity and authorization
-- Security events such as suspicious login attempts
-
-This context does not own child preferences, story progress or subscription billing records.
+It does not own child preferences, subscriptions, or playback state.
 
 ### 5.2 Family and Profiles
 
-Responsibilities:
+Owns households, child profiles, age bands, avatar selection, language preferences, accessibility options, parental controls, and profile limits.
 
-- Parent household representation
-- Child profile creation and lifecycle
-- Profile avatar, display name and age range
-- Language and accessibility preferences
-- Parental controls
-- Profile limits based on subscription entitlement
-- Child-specific listening preferences
+A child profile is never an authentication principal. The authenticated principal is the parent account or administrator.
 
-A child profile is never an authentication principal. The authenticated principal is the parent account or an administrator. Child actions are performed in the context of a selected profile.
+### 5.3 Catalog and Editorial
 
-### 5.3 Content Catalog
-
-Responsibilities:
-
-- Stories, series and episodes
-- Categories, collections and age recommendations
-- Localized metadata
-- Publication workflow
-- Content visibility and entitlement classification
-- Audio tracks, synchronized text and illustrations
-- Ambient sound metadata
-- Search and discovery metadata
-
-Draft and editorial records are isolated from published read models.
+Owns stories, series, episodes, categories, collections, age recommendations, localized metadata, publication workflow, visibility, premium classification, and editorial scheduling.
 
 ### 5.4 Media
 
-Responsibilities:
+Owns media asset metadata, upload lifecycle, signed URLs, checksum validation, scanning state, processing state, renditions, synchronized text assets, illustrations, and offline package manifests.
 
-- Upload orchestration
-- File validation and malware-scanning status
-- Media metadata
-- Transcoding status
-- Signed upload and download URLs
-- Audio variants and image variants
-- Offline package manifests
-- CDN-facing asset references
+Binary content must not be stored in PostgreSQL.
 
-Binary media must not be stored in PostgreSQL. PostgreSQL stores metadata and references only.
+### 5.5 Listening
 
-### 5.5 Listening and Progress
-
-Responsibilities:
-
-- Playback sessions
-- Resume position
-- Episode completion
-- Continue-listening feed
-- Listening history
-- Favorites
-- Lightweight engagement events required by product behavior
-
-Progress updates must be idempotent and tolerant of delayed synchronization from offline devices.
+Owns playback sessions, progress, favorites, history, continue-listening, completion, and idempotent offline synchronization.
 
 ### 5.6 Subscription and Entitlements
 
-Responsibilities:
-
-- Free, trial and premium entitlement state
-- Monthly and annual plan representation
-- App-store purchase verification
-- Subscription lifecycle events
-- Trial eligibility
-- Feature entitlement evaluation
-- Grace periods and expiry
-
-The backend stores the authoritative entitlement state used by APIs. It must not trust a premium flag supplied by a mobile client.
+Owns plans, purchases, provider verification, trial state, subscription lifecycle, grace periods, entitlement evaluation, and premium feature access.
 
 ### 5.7 Advertising Policy
 
-Responsibilities:
-
-- Decide whether the free experience is eligible for an advertisement
-- Track completed listening sessions relevant to the two-session rule
-- Ensure advertisements are never inserted during a story
-- Persist ad decision tokens where needed
-- Support suppression after premium activation
-
-The backend returns policy decisions; the mobile client remains responsible for rendering the supported ad provider experience.
+Owns free-user eligibility, the two-session rule, suppression after premium activation, and ad-decision tracking. It never inserts ads during story playback.
 
 ### 5.8 Notifications
 
-Responsibilities:
-
-- Persist notifications per user
-- Notification templates
-- Delivery status
-- Push provider integration
-- In-app inbox
-- User preferences
-- Administrative announcements, offers and discounts
-
-Business modules request notifications through events or an application contract. They must not integrate directly with push providers.
+Owns notification templates, persisted user notifications, preferences, push delivery, scheduling, retries, and delivery status.
 
 ### 5.9 Administration
 
-Responsibilities:
-
-- Administrative workflows that span domain contexts
-- Dashboard-specific read models
-- Content moderation and publishing actions
-- User support actions
-- Subscription inspection
-- Announcement management
-- Audit search
-
-The administration context does not bypass domain rules. It invokes application use cases exposed by the owning module.
+Owns dashboard-specific orchestration, moderation workflows, support actions, audit searches, and cross-domain administrative views. It must still call the owning domain's application use cases.
 
 ### 5.10 Analytics
 
-Responsibilities:
+Owns privacy-conscious product events, aggregation, and reporting. Analytics must never block critical user journeys.
 
-- Accept privacy-conscious product events
-- Aggregate operational product indicators
-- Build anonymized or pseudonymized reporting views
-- Enforce event retention policies
+## 6. Repository and module structure
 
-Analytics must not become part of synchronous critical paths for login, playback or content browsing.
-
-## 6. Module structure
-
-The repository should use a structure similar to:
+Recommended layout:
 
 ```text
 backend/
   pom.xml
-  application/
+  app/
+    src/main/java/com/kidsaudio/app/
   modules/
     identity/
     family/
@@ -234,7 +213,7 @@ backend/
     testing/
 ```
 
-Each domain module follows this internal structure:
+Each business module follows:
 
 ```text
 <module>/
@@ -249,8 +228,8 @@ Each domain module follows this internal structure:
     port/
   domain/
     model/
-    event/
     policy/
+    event/
     exception/
   infrastructure/
     persistence/
@@ -259,88 +238,95 @@ Each domain module follows this internal structure:
     configuration/
 ```
 
-### 6.1 Dependency direction
+### 6.1 Public module surface
 
-Dependencies point inward:
+A module may expose only:
 
-```text
-API -> Application -> Domain
-Infrastructure -> Application/Domain contracts
-```
+- application use-case interfaces;
+- immutable result models;
+- public integration events;
+- read-only query contracts;
+- approved shared identifiers.
 
-The domain layer must not import Spring, JPA, web, messaging or provider SDK types.
+Internal entities, repositories, configuration classes, and JPA models remain package-private or module-internal.
 
-Application services coordinate use cases and transactions. They do not contain HTTP concerns.
+### 6.2 Shared code rules
 
-Infrastructure adapters implement ports owned by the application or domain layer.
+`shared` must remain small. It may contain:
+
+- technical error representation;
+- base identifiers;
+- time provider interface;
+- correlation and tracing helpers;
+- security principal abstractions;
+- common test fixtures.
+
+It must not become a dumping ground for business logic.
 
 ## 7. Domain modeling rules
 
 ### 7.1 Aggregates
 
-An aggregate defines a consistency boundary. All changes to an aggregate must pass through its root.
+An aggregate is a transactional consistency boundary. Changes must pass through the aggregate root.
 
 Examples:
 
-- ParentAccount
-- Household
-- ChildProfile
-- Story
-- Series
-- PlaybackProgress
-- Subscription
-- Notification
+- `ParentAccount`;
+- `Household`;
+- `ChildProfile`;
+- `Story`;
+- `Series`;
+- `PlaybackProgress`;
+- `Subscription`;
+- `Notification`.
 
-Aggregates should remain small. A Story aggregate should not load all audio binary metadata, listening history and every localized asset into one object graph.
+Aggregates should remain small and avoid loading unrelated collections.
 
-### 7.2 Entities and value objects
+### 7.2 Value objects
 
-Value objects should be preferred for validated domain concepts, for example:
+Use immutable value objects for validated concepts:
 
-- EmailAddress
-- ChildProfileId
-- StoryId
-- AgeRange
-- LocaleCode
-- PlaybackPosition
-- SubscriptionPeriod
-- MediaAssetId
+```java
+public record EmailAddress(String value) {
+    public EmailAddress {
+        if (value == null || !value.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
+            throw new InvalidEmailAddressException();
+        }
+        value = value.trim().toLowerCase(Locale.ROOT);
+    }
+}
+```
 
-Identifiers must use immutable, non-sequential externally visible values such as UUIDs. Database-generated numeric identifiers may exist internally only when they are not exposed.
+Suitable concepts include email, locale, profile ID, story ID, playback position, age range, checksum, subscription period, and media asset ID.
 
-### 7.3 Domain services and policies
+### 7.3 Policies
 
-Use domain services only when a business rule does not naturally belong to one aggregate. Use policy objects for decisions such as:
+Use policy objects for decisions that combine multiple facts:
 
-- CanCreateChildProfile
-- IsStoryAvailableForProfile
-- CanStartPremiumTrial
-- ShouldDisplayAdvertisement
-- CanDownloadOffline
+- `CanCreateChildProfilePolicy`;
+- `StoryAvailabilityPolicy`;
+- `PremiumTrialEligibilityPolicy`;
+- `AdvertisementEligibilityPolicy`;
+- `OfflineDownloadEligibilityPolicy`.
 
 Policies must be unit-testable without Spring.
 
 ### 7.4 Domain events
 
-Domain events describe facts that have already occurred:
+Domain events describe completed facts and use past-tense names:
 
-- ParentRegistered
-- ChildProfileCreated
-- StoryPublished
-- PlaybackSessionCompleted
-- SubscriptionActivated
-- SubscriptionExpired
-- NotificationRequested
+- `ParentRegistered`;
+- `ChildProfileCreated`;
+- `StoryPublished`;
+- `PlaybackCompleted`;
+- `SubscriptionActivated`;
+- `NotificationRequested`.
 
-Event names use past tense. Events must be immutable and versioned when published outside the owning module.
+Events are immutable and versioned when they leave the module boundary.
 
 ## 8. Application layer
 
-Each application use case is represented by a command or query handler.
-
-Commands change state. Queries return data without changing business state.
-
-Example command:
+Each use case is represented by a command or query and a dedicated handler or application service.
 
 ```java
 public record CreateChildProfileCommand(
@@ -348,11 +334,9 @@ public record CreateChildProfileCommand(
         String displayName,
         LocalDate birthDate,
         String avatarKey,
-        String locale
+        Locale locale
 ) {}
 ```
-
-Example use case contract:
 
 ```java
 public interface CreateChildProfileUseCase {
@@ -360,87 +344,79 @@ public interface CreateChildProfileUseCase {
 }
 ```
 
-Application services are responsible for:
+```java
+@Service
+@Transactional
+final class CreateChildProfileService implements CreateChildProfileUseCase {
+    private final HouseholdRepository householdRepository;
+    private final EntitlementQuery entitlementQuery;
+    private final DomainEventPublisher eventPublisher;
 
-- Loading aggregates through repository ports
-- Performing authorization checks that require domain context
-- Invoking domain behavior
-- Persisting the result
-- Registering integration events
-- Returning application results
+    @Override
+    public ChildProfileResult execute(CreateChildProfileCommand command) {
+        var household = householdRepository.getRequiredByParentId(command.parentAccountId());
+        var entitlement = entitlementQuery.getForAccount(command.parentAccountId());
+        var profile = household.createProfile(command, entitlement.profileLimit());
+        householdRepository.save(household);
+        eventPublisher.publishAll(household.pullDomainEvents());
+        return ChildProfileResult.from(profile);
+    }
+}
+```
+
+Application services are responsible for transaction boundaries, authorization requiring domain context, orchestration, persistence, event registration, and returning application results.
 
 Controllers must not orchestrate repositories directly.
 
 ## 9. API layer
 
-### 9.1 API style
-
-Public APIs are RESTful JSON APIs under:
+### 9.1 Route conventions
 
 ```text
-/api/v1
+/api/v1/**           consumer APIs
+/api/v1/admin/**     administrative APIs
+/internal/v1/**      service-to-service callbacks
 ```
 
-Administrative APIs are separated:
-
-```text
-/api/v1/admin
-```
-
-Internal service callbacks use:
-
-```text
-/internal/v1
-```
-
-Internal endpoints must be protected with service credentials or network-level controls and must never rely only on obscurity.
+Internal routes require service authentication and network controls.
 
 ### 9.2 Controller rules
 
 Controllers must:
 
-- Validate transport-level input
-- Resolve the authenticated principal
-- Convert DTOs into commands or queries
-- Invoke exactly one application use case where practical
-- Convert results into response DTOs
-- Avoid business logic
-- Avoid direct repository access
-
-### 9.3 DTO rules
-
-API DTOs are separate from domain entities and persistence entities.
-
-Request DTOs use Bean Validation for structural rules. Domain validation remains in the domain model.
-
-Example:
+- validate transport-level input;
+- resolve the authenticated principal;
+- map DTOs into commands or queries;
+- invoke an application use case;
+- map application results to response DTOs;
+- avoid business logic and repository access.
 
 ```java
-public record CreateChildProfileRequest(
-        @NotBlank @Size(max = 40) String displayName,
-        @Past LocalDate birthDate,
-        @NotBlank String avatarKey,
-        @NotBlank String locale
-) {}
-```
+@RestController
+@RequestMapping("/api/v1/child-profiles")
+final class ChildProfileController {
+    private final CreateChildProfileUseCase createChildProfile;
 
-### 9.4 Response envelope
-
-Successful resource responses may return the resource directly. Collection responses must include pagination metadata.
-
-```json
-{
-  "items": [],
-  "page": {
-    "number": 0,
-    "size": 20,
-    "totalElements": 0,
-    "totalPages": 0
-  }
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    ChildProfileResponse create(
+            @AuthenticationPrincipal ParentPrincipal principal,
+            @Valid @RequestBody CreateChildProfileRequest request) {
+        var result = createChildProfile.execute(request.toCommand(principal.accountId()));
+        return ChildProfileResponse.from(result);
+    }
 }
 ```
 
-Errors use one consistent problem format based on RFC 9457 concepts:
+### 9.3 DTO separation
+
+Transport DTOs, application models, domain entities, and JPA entities are distinct types.
+
+Bean Validation handles structural validation. Domain objects enforce business invariants.
+
+### 9.4 Error format
+
+All APIs use a consistent problem response:
 
 ```json
 {
@@ -455,632 +431,352 @@ Errors use one consistent problem format based on RFC 9457 concepts:
 }
 ```
 
-Internal stack traces must never be returned to clients.
+Stack traces and internal exception details must never be returned.
 
-### 9.5 Pagination and sorting
+### 9.5 Pagination, filtering, and sorting
 
-All potentially unbounded collections must be paginated. API page size defaults to 20 and should have a maximum of 100 unless a documented endpoint requires otherwise.
+Potentially unbounded collections must be paginated. Defaults:
 
-Stable sorting must include a unique tie-breaker.
+- default page size: 20;
+- maximum page size: 100;
+- stable secondary sort by ID;
+- cursor pagination for high-volume feeds where offset pagination becomes inefficient.
 
-Cursor pagination is preferred for high-volume chronological feeds such as listening history and notifications. Offset pagination is acceptable for small administrative tables.
+Filters must be allow-listed. Arbitrary field names from clients must never be converted directly into SQL fragments.
 
 ### 9.6 Idempotency
 
-Endpoints that may be retried by mobile clients must support idempotency where duplicate processing would be harmful.
+Mutation endpoints vulnerable to retries should accept `Idempotency-Key`:
 
-Examples:
+- purchase verification;
+- offline sync batches;
+- support overrides;
+- content publication;
+- provider callbacks.
 
-- Playback session completion
-- Purchase verification
-- Notification acknowledgement
-- Administrative publish actions
+The idempotency record stores request hash, operation state, and final response reference.
 
-Clients supply an `Idempotency-Key`. The backend stores the key, request fingerprint and result for a bounded retention period.
+## 10. Persistence architecture
 
-## 10. Authentication and authorization integration
+### 10.1 JPA entities
 
-### 10.1 Tokens
+JPA entities belong to infrastructure and must not leak into API or domain contracts.
 
-Access tokens must be short-lived. Refresh tokens must be rotated and revocable.
+Prefer explicit mappings rather than exposing bidirectional object graphs. Avoid `FetchType.EAGER` for collections.
 
-Refresh tokens should be represented server-side by a hashed token identifier. Raw refresh tokens must not be logged or persisted in plain text.
+### 10.2 Transaction rules
 
-### 10.2 Roles
+- one application command normally owns one transaction;
+- remote calls must not be made inside long database transactions;
+- read-only queries use `@Transactional(readOnly = true)` where appropriate;
+- event publication uses transactional outbox for cross-module or external delivery;
+- optimistic locking is required for concurrently edited aggregates.
 
-Initial platform roles:
-
-- PARENT
-- CONTENT_EDITOR
-- CONTENT_REVIEWER
-- SUPPORT_AGENT
-- ADMIN
-- SYSTEM
-
-Roles are coarse-grained. Application permissions provide finer control, for example:
-
-- story:create
-- story:publish
-- user:read
-- user:suspend
-- subscription:read
-- announcement:manage
-
-### 10.3 Resource authorization
-
-Role checks alone are insufficient. Every household and profile operation must confirm resource ownership.
-
-A parent may access only child profiles belonging to the authenticated household. An identifier supplied in a URL is never proof of authorization.
-
-### 10.4 Parent-zone protection
-
-The parent-zone PIN is an additional product protection, not a replacement for account authentication.
-
-The backend should support a short-lived parent-zone authorization claim after successful PIN verification. PIN verification attempts must be rate-limited and audited. PIN values must be stored using a password-grade hashing algorithm.
-
-Biometric verification occurs on the device. The backend trusts only a valid device-authenticated flow or short-lived token defined in the mobile security design; it does not receive biometric data.
-
-## 11. Persistence architecture
-
-### 11.1 Database ownership
-
-In the modular monolith, modules may share one PostgreSQL cluster but must own separate schemas or clearly isolated table namespaces.
-
-One module must not query another module's tables directly. Cross-module data access occurs through application contracts or replicated read models.
-
-### 11.2 JPA entity rules
-
-Persistence entities are infrastructure concerns and must not leak into API responses.
-
-Rules:
-
-- Avoid eager relationships by default
-- Avoid large bidirectional object graphs
-- Use explicit fetch plans
-- Detect and prevent N+1 queries
-- Use optimistic locking for concurrently edited aggregates
-- Store timestamps in UTC
-- Use database constraints in addition to application validation
-- Never use schema auto-generation in production
-
-### 11.3 Transactions
-
-Each command use case normally executes within one local database transaction.
-
-Transactions should be short and must not contain remote network calls.
-
-For workflows requiring a database change and event publication, use the transactional outbox pattern.
-
-```text
-Business transaction:
-1. Update aggregate state
-2. Insert outbox record
-3. Commit
-
-Publisher:
-4. Read pending outbox records
-5. Publish to RabbitMQ
-6. Mark as published
+```java
+@Version
+private long version;
 ```
 
-### 11.4 Migrations
+### 10.3 Query strategy
 
-Flyway migrations are immutable after they have been applied to a shared environment.
+Use repository methods for simple aggregate access. Use dedicated query repositories or projections for complex reads and dashboard views.
 
-Migration rules:
+Do not force every read through aggregate loading when a projection is more efficient.
 
-- One logical change per migration where practical
-- Backward-compatible changes before code that depends on them
-- Separate destructive cleanup into later releases
-- Index creation assessed for production locking impact
-- Data migrations written to be restartable or safely repeatable
+### 10.4 N+1 prevention
 
-## 12. Caching
+Every endpoint returning collections must be reviewed for N+1 queries. Use projections, entity graphs, batch fetching, or explicit joins. Integration tests should verify query counts for critical endpoints.
 
-Caching is an optimization, never the source of truth.
+## 11. Messaging architecture
 
-Recommended cache candidates:
+RabbitMQ is used for asynchronous integration and background work.
 
-- Published story metadata
-- Category and collection lists
-- Feature entitlement snapshots with short TTL
-- Public configuration
-- Rate-limit counters
-- Short-lived signed media URL metadata
+```mermaid
+sequenceDiagram
+    participant App as Application Service
+    participant DB as PostgreSQL
+    participant Outbox as Outbox Publisher
+    participant MQ as RabbitMQ
+    participant Worker as Consumer
 
-Do not cache highly sensitive account data without an explicit security review.
-
-Cache keys must be namespaced and versioned:
-
-```text
-catalog:v1:story:{storyId}:{locale}
-family:v1:profile-summary:{profileId}
-subscription:v1:entitlements:{accountId}
+    App->>DB: Save aggregate and outbox event in one transaction
+    Outbox->>DB: Load unpublished events
+    Outbox->>MQ: Publish event
+    MQ-->>Worker: Deliver event
+    Worker->>DB: Execute idempotent handler
 ```
 
-Cache invalidation should occur after a successful transaction, generally through events. TTL is still required as a safety mechanism.
-
-Cache stampede protection should be used for high-traffic catalog entries.
-
-## 13. Messaging and asynchronous processing
-
-RabbitMQ is used for asynchronous work and cross-module integration events where eventual consistency is acceptable.
-
-Suitable use cases:
-
-- Notification requests
-- Media processing status
-- Analytics ingestion
-- Search index updates
-- Subscription lifecycle propagation
-- Cache invalidation
-- Administrative audit enrichment
-
-Unsuitable use cases:
-
-- Immediate authorization decisions
-- Reading playback progress during resume
-- Operations requiring the caller to know success immediately
-
-### 13.1 Event envelope
+### 11.1 Event envelope
 
 ```json
 {
-  "eventId": "0d24f240-f990-4dc6-bb46-f56f9bd85231",
+  "eventId": "2f7af63c-0b88-49ad-bb3c-61e09bf65f17",
   "eventType": "story.published.v1",
-  "occurredAt": "2026-07-14T18:45:00Z",
-  "correlationId": "8214e8b8-a643-42b3-ab1f-fb2fe55791ef",
-  "causationId": "5c33d8f9-ed88-481c-a42b-980b53d19a19",
+  "occurredAt": "2026-07-14T18:30:00Z",
   "producer": "catalog",
-  "payload": {}
+  "correlationId": "3d8fd4d6-cf58-4df6-b2c8-302cfacde39e",
+  "payload": {
+    "storyId": "fcf8cc8e-5a54-47d8-8e98-f9959b94905c",
+    "locale": "ro-RO"
+  }
 }
 ```
 
-Consumers must be idempotent. At-least-once delivery is assumed.
+### 11.2 Consumer requirements
 
-### 13.2 Retry and dead-letter policy
+Consumers must be:
 
-Transient failures use bounded retries with exponential backoff. Permanent failures are moved to a dead-letter queue with enough metadata for diagnosis and safe replay.
+- idempotent;
+- retry-safe;
+- observable;
+- able to reject poison messages to a dead-letter queue;
+- version-aware;
+- bounded by explicit concurrency.
 
-Poison messages must not block a queue indefinitely.
+### 11.3 Retry policy
 
-## 14. Media architecture
+Use bounded exponential backoff. Permanent validation failures must not retry indefinitely. Dead-letter records require operational visibility and replay procedures.
 
-The backend coordinates media workflows but does not stream large files through application servers unless a specific security requirement demands it.
+## 12. Security architecture
 
-Recommended upload flow:
+### 12.1 Authentication
+
+Use short-lived access tokens and rotating refresh tokens. Refresh token records are stored server-side as hashes and bound to a device session.
+
+### 12.2 Authorization
+
+Authorization is layered:
+
+1. route-level role checks;
+2. account ownership checks;
+3. profile ownership checks;
+4. entitlement checks;
+5. domain-specific policy checks.
+
+`ADMIN` does not imply unrestricted bypass of business rules. Sensitive support actions require explicit permissions and audit entries.
+
+### 12.3 Parent Zone
+
+Parent Zone access requires the authenticated parent plus recent PIN or biometric-backed local confirmation according to the Parent Zone security ADR. The backend tracks verification freshness where sensitive operations require re-authentication.
+
+### 12.4 Input and upload security
+
+All uploads must use allow-listed MIME types, size limits, extension checks, checksum verification, malware scanning, and asynchronous media inspection before publication.
+
+### 12.5 Sensitive data
+
+Passwords, tokens, PINs, secrets, and provider credentials must never appear in logs. Child-related data is minimized and must not be included in analytics unless explicitly required and privacy-reviewed.
+
+## 13. Cache architecture
+
+Redis is an optimization, not the system of record.
+
+Suitable cache targets:
+
+- published catalog cards;
+- category and collection metadata;
+- entitlement snapshots with short TTL;
+- feature flags;
+- rate-limit counters;
+- short-lived signed URL metadata.
+
+Cache keys follow:
 
 ```text
-Admin requests upload slot
--> backend validates metadata and permission
--> backend creates pending media record
--> backend returns signed object-storage upload URL
--> browser uploads directly
--> storage event or callback starts validation/transcoding
--> media status becomes READY
--> content editor may attach asset to draft content
+<environment>:<module>:<resource>:<identifier>:<version>
 ```
 
-Recommended playback flow:
+Example:
 
 ```text
-Mobile requests playable asset
--> backend validates story visibility and entitlement
--> backend returns CDN-backed signed URL or manifest
--> mobile streams directly from CDN/object storage
+prod:catalog:story-card:fcf8cc8e:v3
 ```
 
-Uploads must validate content type, extension, signature, maximum size and scan status. The client-provided MIME type is not trusted.
+Invalidation must be event-driven where practical. Cache failure must degrade to database or service access for critical journeys.
 
-## 15. Offline listening
+## 14. Media pipeline
 
-Premium users may download eligible content for offline use.
+```mermaid
+sequenceDiagram
+    participant Admin as Admin Dashboard
+    participant API as Media API
+    participant Store as Object Storage
+    participant Worker as Media Worker
+    participant Catalog as Catalog Module
 
-The backend should issue an offline package manifest containing:
+    Admin->>API: Request signed upload URL
+    API-->>Admin: Signed URL and asset ID
+    Admin->>Store: Upload binary
+    Store-->>API: Upload completion signal
+    API->>Worker: media.uploaded.v1
+    Worker->>Worker: Validate, scan, inspect, transcode
+    Worker->>Catalog: media.ready.v1
+    Catalog->>Catalog: Mark asset eligible for publication
+```
 
-- Story or episode identifier
-- Media asset references
-- Content version
-- Expiry or license-check policy
-- Checksums
-- Required locale assets
-- Synchronized text version
-- Illustration versions
+Application servers must not proxy large audio files unless required for a specific security reason.
 
-The mobile application stores encrypted or platform-protected media where practical. The server does not promise absolute prevention of copying, but it must avoid publishing permanent unrestricted premium URLs.
+## 15. Offline synchronization
 
-Offline progress synchronization must use timestamps, sequence values or revision numbers to resolve delayed updates. The chosen conflict rule must favor preserving the furthest legitimate playback position while allowing explicit restart actions.
+The mobile app queues progress and download events locally. Sync endpoints accept batches with stable client event IDs.
 
-## 16. Subscription verification
+Conflict rules:
 
-App-store receipts or purchase tokens must be verified server-side with the relevant provider.
+- progress uses the highest valid playback position unless a later explicit restart exists;
+- completion is monotonic unless reset by a parent action;
+- duplicate client event IDs are ignored;
+- revoked entitlements remove future download authorization but do not corrupt local metadata;
+- server timestamps are authoritative for entitlement and publication decisions.
 
-The mobile client must never directly set subscription status.
+## 16. Scheduling and background jobs
 
-Purchase verification must be idempotent and auditable. Provider notifications should update subscription state asynchronously.
+Scheduled work includes:
 
-The entitlement service should expose a compact result:
+- publication activation;
+- subscription reconciliation;
+- expired token cleanup;
+- notification dispatch;
+- abandoned upload cleanup;
+- retention and anonymization;
+- outbox publishing.
+
+Jobs must use distributed locking where duplicate execution would be harmful. Every job records start, duration, processed count, failed count, and final status.
+
+## 17. Observability
+
+Every request and message handler must propagate a correlation ID.
+
+Structured log example:
 
 ```json
 {
-  "plan": "PREMIUM_ANNUAL",
-  "status": "ACTIVE",
-  "trial": false,
-  "expiresAt": "2027-07-14T00:00:00Z",
-  "features": [
-    "MULTIPLE_PROFILES",
-    "OFFLINE_DOWNLOADS",
-    "NO_ADS"
-  ]
+  "timestamp": "2026-07-14T18:30:00.123Z",
+  "level": "INFO",
+  "service": "kids-audio-backend",
+  "module": "listening",
+  "event": "playback_session_started",
+  "correlationId": "3d8fd4d6-cf58-4df6-b2c8-302cfacde39e",
+  "accountId": "pseudonymized-id",
+  "profileId": "pseudonymized-id",
+  "durationMs": 34
 }
 ```
 
-Business modules should depend on feature entitlements rather than hard-coding plan names.
+Required metrics include:
 
-## 17. Validation strategy
+- HTTP latency and errors by route;
+- database pool usage;
+- cache hit ratio;
+- RabbitMQ queue depth and consumer failures;
+- playback session start failures;
+- entitlement evaluation latency;
+- media processing duration;
+- notification success rate;
+- scheduled job outcomes.
 
-Validation occurs at multiple layers:
+Audit records are separate from application logs and are immutable.
 
-| Layer | Responsibility |
-|---|---|
-| API | Required fields, formatting, size limits, syntactic validity |
-| Application | Actor context, use-case preconditions, orchestration constraints |
-| Domain | Business invariants |
-| Database | Uniqueness, nullability, referential integrity, check constraints |
-| Infrastructure | File signatures, provider responses, integration limits |
+## 18. Resilience
 
-Validation messages exposed to clients must be safe, actionable and localized by the client when appropriate.
+Use timeouts on every external dependency. Retries are allowed only for safe or idempotent operations.
 
-## 18. Exception handling
+Use circuit breakers for unstable external providers such as push, payment verification, or email.
 
-Exceptions are categorized:
+Graceful degradation examples:
 
-- ValidationException
-- ResourceNotFoundException
-- ConflictException
-- AuthorizationException
-- AuthenticationException
-- RateLimitException
-- ExternalServiceException
-- InfrastructureException
+- push failure does not block notification persistence;
+- analytics failure does not block playback;
+- Redis failure falls back to authoritative storage where safe;
+- CDN problems return a controlled playback error without corrupting progress;
+- advertising provider failure does not interrupt the child experience.
 
-Domain exceptions must use stable error codes. Controllers rely on a global exception handler to map exceptions to API problems.
+## 19. Testing strategy
 
-Catching `Exception` in business code is prohibited unless the code immediately converts it into a meaningful infrastructure boundary exception and preserves the cause.
+### 19.1 Unit tests
 
-## 19. Resilience
+Required for aggregates, value objects, policies, mappers with non-trivial rules, and application services.
 
-All outbound calls must define:
+### 19.2 Integration tests
 
-- Connection timeout
-- Response timeout
-- Retry policy
-- Circuit-breaker policy when appropriate
-- Maximum concurrency or bulkhead
-- Observability tags
+Use Testcontainers for PostgreSQL, Redis, and RabbitMQ. Integration tests verify migrations, repository behavior, transaction boundaries, event outbox flow, and security configuration.
 
-Retries are permitted only for operations known to be safe or idempotent.
+### 19.3 API tests
 
-Fallbacks must not silently grant access, premium entitlement or administrative permissions.
+Verify status codes, schema, authorization, validation, idempotency, pagination, filtering, and error codes.
 
-External-provider degradation should not unnecessarily block already-authorized playback when a cached valid entitlement remains within an approved grace period.
+### 19.4 Contract tests
 
-## 20. Rate limiting and abuse prevention
+Provider integrations and future extracted services require contract tests. WireMock is used for external HTTP providers.
 
-Rate limits should exist for:
+### 19.5 Architecture tests
 
-- Login
-- Registration
-- Password reset
-- Email verification resend
-- Parent PIN verification
-- Search
-- Signed media URL generation
-- Upload creation
-- Purchase verification
-- Administrative bulk actions
+ArchUnit rules must verify:
 
-Limits may combine account, IP, device and endpoint keys. Responses use HTTP 429 and include a safe retry indication.
+- domain packages do not depend on Spring or JPA;
+- controllers do not access repositories;
+- modules do not access other modules' infrastructure packages;
+- public APIs are exposed only from approved packages.
 
-Bot protection may be added to public account flows. It must remain accessible and should not be imposed on every normal authenticated mobile request.
+## 20. Documentation requirements
 
-## 21. Logging
+Every public class, controller, use-case interface, event, and externally visible DTO must have useful JavaDoc.
 
-Logs must be structured JSON in deployed environments.
+OpenAPI annotations or generated metadata must document:
 
-Every request should include:
+- purpose;
+- authorization;
+- request fields;
+- responses;
+- error codes;
+- pagination;
+- idempotency requirements.
 
-- timestamp
-- level
-- service/module
-- correlationId
-- traceId
-- requestId
-- actor type and pseudonymous actor ID where allowed
-- HTTP method
-- route template
-- status
-- duration
+Code comments explain non-obvious decisions, not what the code literally does.
 
-Never log:
+## 21. Definition of done for backend changes
 
-- Passwords or PINs
-- Access or refresh tokens
-- Raw app-store receipts
-- Full payment data
-- Private media URLs with credentials
-- Sensitive child information
-- Request bodies by default
+A backend change is complete only when:
 
-Business events worth logging include publication, subscription state change, profile lifecycle changes and administrative actions. Detailed rules belong in `Logging_Monitoring.md`.
+- domain ownership is clear;
+- validation exists at transport and domain levels;
+- authorization is enforced server-side;
+- migrations are included and reversible operationally;
+- tests cover happy path and important failures;
+- logs and metrics are added where operationally relevant;
+- API and event contracts are documented;
+- no secrets or personal data are logged;
+- architecture boundaries pass automated checks;
+- `PROJECT_CHANGELOG.md` is updated for significant changes.
 
-## 22. Audit logging
+## 22. Extraction readiness
 
-Security and administrative audit records are distinct from operational logs and require longer retention and controlled access.
+A module is a candidate for microservice extraction only when at least one condition is proven:
 
-Audit records include:
+- it requires materially different scaling;
+- it has an independent release cadence;
+- it needs a separate security boundary;
+- it is owned by a separate team;
+- its failure isolation brings measurable benefit.
 
-- Actor
-- Action
-- Target type and ID
-- Timestamp
-- Outcome
-- Reason when supplied
-- Correlation ID
-- Before/after summary for approved fields
+Before extraction, confirm:
 
-Administrative audit entries must be append-only from the application's perspective.
+- clear data ownership;
+- stable public contracts;
+- event-driven integration where appropriate;
+- no direct database coupling;
+- independent observability;
+- operational readiness.
 
-## 23. Metrics and tracing
+## 23. Related documents
 
-Minimum backend metrics:
-
-- HTTP request rate, duration and error ratio
-- JVM and connection-pool metrics
-- Database query and transaction indicators
-- Cache hit ratio
-- Queue depth and consumer failures
-- Outbox backlog
-- Media processing duration
-- Login and verification failure counts
-- Playback-progress update latency
-- Purchase verification outcomes
-- Notification delivery outcomes
-
-Distributed traces must propagate correlation through HTTP and RabbitMQ message headers.
-
-High-cardinality values such as raw user IDs must not be metric labels.
-
-## 24. Configuration and secrets
-
-Configuration follows environment-specific externalization.
-
-Rules:
-
-- No secrets in Git
-- Secrets provided by environment or secret manager
-- Typed configuration properties with validation
-- Safe defaults for local development only
-- Startup failure when mandatory production configuration is absent
-- Feature flags used for controlled rollout, not permanent branching logic
-
-Sensitive configuration changes must be auditable operationally.
-
-## 25. API documentation
-
-Every externally callable endpoint must appear in generated OpenAPI documentation.
-
-OpenAPI descriptions must include:
-
-- Purpose
-- Authentication requirements
-- Required permissions
-- Request and response schema
-- Validation constraints
-- Error responses
-- Pagination behavior
-- Idempotency behavior where relevant
-
-Every public Java class, public method, controller, DTO and non-obvious configuration component requires useful JavaDoc. JavaDoc must explain intent and contracts rather than repeat the method name.
-
-## 26. Testing architecture
-
-### 26.1 Unit tests
-
-Unit tests cover:
-
-- Domain invariants
-- Policies
-- Value objects
-- Application orchestration with mocked ports
-- Mapping and validation edge cases
-
-### 26.2 Module integration tests
-
-Use Spring Boot tests selectively for:
-
-- Security rules
-- Controller serialization
-- Persistence mappings
-- Transaction behavior
-- Outbox publication
-- Cache behavior
-
-### 26.3 Infrastructure integration tests
-
-Testcontainers should run PostgreSQL, Redis and RabbitMQ for meaningful integration tests. Do not replace all integration behavior with in-memory substitutes that differ from production.
-
-### 26.4 Contract tests
-
-API contracts and integration-event schemas must be validated. Breaking contract changes require a new API or event version and a migration plan.
-
-### 26.5 Architecture tests
-
-Use ArchUnit or equivalent checks to enforce:
-
-- Module boundaries
-- Dependency direction
-- Controller restrictions
-- Domain independence from Spring/JPA
-- Naming conventions
-- Prohibition of cross-module repository access
-
-## 27. Code quality rules
-
-- Constructor injection only
-- Immutable DTOs and value objects where possible
-- No field injection
-- No static mutable state
-- No generic utility dumping ground
-- No direct use of `LocalDateTime.now()` in domain logic; inject a Clock
-- No hidden database access from mappers or serializers
-- No returning `null` collections
-- Avoid boolean parameters that obscure intent
-- Prefer explicit types over unstructured maps
-- Avoid premature abstraction across unrelated domains
-- Keep methods focused and readable
-
-Shared code must represent a truly shared technical concern. Domain concepts are not moved into `shared` merely because two modules use similar words.
-
-## 28. Deployment and runtime profile
-
-The initial backend is packaged as one container image.
-
-It may run multiple replicas behind a load balancer. Therefore:
-
-- Application instances must be stateless
-- Session state must not live in process memory
-- Scheduled work requires distributed coordination
-- Idempotency state must be shared
-- Uploaded files must not depend on local disk
-- Graceful shutdown must stop accepting work and complete in-flight requests within a bounded interval
-
-Health endpoints:
-
-- Liveness: process can continue running
-- Readiness: instance can serve traffic
-- Startup: initialization has completed
-
-Readiness should account for mandatory dependencies but avoid cascading total outages due to optional integrations.
-
-## 29. Future service extraction criteria
-
-A module may be extracted into a separately deployed service when at least one of the following is true:
-
-- It requires materially different scaling characteristics
-- It has a distinct availability target
-- It has a dedicated team and independent release cadence
-- It creates deployment contention in the monolith
-- Security or regulatory isolation requires it
-- Its technology requirements cannot be satisfied reasonably in the current runtime
-
-Extraction is not justified only because the target architecture mentions microservices.
-
-Likely early extraction candidates:
-
-1. Media processing
-2. Notifications
-3. Analytics ingestion
-
-Identity and subscription extraction should occur only with strong operational justification because they participate in many critical flows.
-
-## 30. Initial implementation milestones
-
-### Milestone 1: Foundation
-
-- Spring Boot application skeleton
-- Module boundaries
-- Shared error model
-- Security baseline
-- PostgreSQL and Flyway
-- Structured logging and correlation IDs
-- OpenAPI
-- Testcontainers
-
-### Milestone 2: Identity and family
-
-- Parent registration and login
-- Refresh token rotation
-- Household and child profiles
-- Parent-zone PIN
-- Authorization tests
-
-### Milestone 3: Catalog and media
-
-- Draft/published content model
-- Categories, stories, series and episodes
-- Signed uploads
-- Media validation state
-- Public catalog APIs
-
-### Milestone 4: Listening
-
-- Playback authorization
-- Resume progress
-- Continue listening
-- Favorites and history
-- Offline manifest groundwork
-
-### Milestone 5: Monetization
-
-- Entitlements
-- Trial lifecycle
-- Store verification adapters
-- Advertisement policy
-- Offline premium authorization
-
-### Milestone 6: Administration and communication
-
-- Admin APIs
-- Publish workflow
-- Persisted notifications
-- Announcements and offers
-- Audit search
-
-## 31. Definition of done for backend features
-
-A backend feature is not complete until:
-
-- Business rules are represented explicitly
-- Authentication and resource authorization are implemented
-- API and error contracts are documented
-- Database migrations are included
-- Unit and integration tests cover success and important failure paths
-- Logs and metrics support production diagnosis
-- Sensitive data handling has been reviewed
-- Idempotency and retry behavior have been considered
-- Module boundaries remain intact
-- Relevant architecture documentation and changelog entries are updated
-
-## 32. Open decisions
-
-The following decisions should receive dedicated ADRs before implementation is finalized:
-
-1. Exact identity provider strategy: first-party credentials only or external identity provider.
-2. App-store verification library/provider selection.
-3. Object storage and CDN providers.
-4. Audio transcoding pipeline.
-5. Search implementation: PostgreSQL search initially versus dedicated search engine.
-6. Exact analytics event retention and child-privacy model.
-7. Offline license expiry and refresh behavior.
-8. Notification push provider abstraction.
-9. Whether module schemas share one database user or use per-schema credentials.
-
-Until an ADR replaces them, the defaults in this document apply.
-
-## 33. Related documents
-
-- `Architecture_Principles.md`
 - `Software_Architecture.md`
+- `Architecture_Principles.md`
 - `Database_Design.md`
 - `API_Specification.md`
 - `Security_Architecture.md`
 - `Performance_Guidelines.md`
 - `Logging_Monitoring.md`
-- `Notifications.md`
-- `Mobile_Architecture.md`
-- `Admin_Dashboard.md`
-
-## 34. Final rule
-
-The backend must optimize for correctness, safety and clarity before distribution complexity. A well-structured modular application is preferred over a network of poorly defined services. Service boundaries are earned through domain clarity and operational evidence.
+- `Event_Catalog.md`
+- `Error_Catalog.md`
+- `Implementation_Roadmap.md`
+- `docs/00_Project/ADR/`
