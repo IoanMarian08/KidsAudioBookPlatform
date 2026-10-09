@@ -25,6 +25,7 @@ The audit enumerated the repository's Git tree, reviewed the Markdown files for 
 | AUD-008 | Medium | Diagram collection contains many supplemental governance documents; the C4 index covers only a subset | Add task-based navigation to distinguish core diagrams from supplemental policies |
 | AUD-009 | Low | Repository includes empty historical document-de-proba scaffolding and skeletal LICENSE | Defer removal/license change to owner; document maturity honestly |
 | AUD-010 | Medium | Docs have no tested automated local-link quality gate in source tree | Add lightweight checker and PR CI workflow |
+| AUD-011 | High | Notifications.md listed PATCH /notifications/{id}/read and /dismiss plus GET unread-count, while canonical API Specification declares POST /read and DELETE /notifications/{id} | Reconcile Notifications API table to API Specification |
 
 ## Link review caveats
 
