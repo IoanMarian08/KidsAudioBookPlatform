@@ -14,7 +14,8 @@ KidsAudioBookPlatform is a parent-controlled audio-story platform for children i
 2. [Product Requirements](01_Product/Product_Requirements_Document.md), [Functional Requirements](01_Product/Functional_Requirements.md), [Nonfunctional Requirements](01_Product/Non_Functional_Requirements.md).
 3. [Software Architecture](03_Architecture/Software_Architecture.md), [Backend Architecture](03_Architecture/Backend_Architecture.md), [API Specification](03_Architecture/API_Specification.md).
 4. [Coding Standards](04_Engineering/Coding_Standards.md), [Git Workflow](04_Engineering/Git_Workflow.md), [Definition of Done](04_Engineering/Definition_of_Done.md).
-5. [Testing Strategy](06_Testing/Testing_Strategy.md) and [CI/CD](05_DevOps/CI_CD.md).
+5. [Implementation Blueprints](07_Blueprints/README.md) for module-specific contracts and validation.
+6. [Testing Strategy](06_Testing/Testing_Strategy.md) and [CI/CD](05_DevOps/CI_CD.md).
 
 For **proposed launch policies** and decisions awaiting approval, consult the [Decision Register](00_Project/DECISION_REGISTER.md). The [Documentation Audit](00_Project/DOCUMENTATION_AUDIT.md) tracks baseline gaps and remediation work. Implementation packages are not yet a running production system.
 
@@ -29,6 +30,7 @@ For **proposed launch policies** and decisions awaiting approval, consult the [D
 | [04_Engineering](04_Engineering/) | Code/documentation standards, branching, review, DoR/DoD, AI usage | Developers/reviewers |
 | [05_DevOps](05_DevOps/) | Infrastructure, Docker, Compose, CI/CD, deployment, monitoring, recovery | Platform/SRE |
 | [06_Testing](06_Testing/) | Unit, integration, acceptance, performance and security | QA and engineering |
+| [07_Blueprints](07_Blueprints/) | Build-oriented bounded-context plans and test inventories | Backend/mobile/QA |
 
 The [C4 Model](03_Architecture/C4_Model/README.md) is an architecture *view set*, not an independent competing source of business rules.
 

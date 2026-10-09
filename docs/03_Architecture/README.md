@@ -33,7 +33,7 @@ Defines the technical system, runtime boundaries, data ownership and security. S
 
 ## How to use this area
 
-Feature owners first identify the bounded context, then API/event contract, data owner, threats, tests and rollout. Read [active ADRs](../00_Project/ADR/README.md) before creating new deployment components.
+Feature owners first identify the bounded context, then API/event contract, data owner, threats, tests and rollout. Read [active ADRs](../00_Project/ADR/README.md) before creating new deployment components. Implement by following the [bounded-context blueprints](../07_Blueprints/README.md), which remain drafts until matched to working code.
 
 ## Review rules
 

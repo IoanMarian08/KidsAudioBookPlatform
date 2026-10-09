@@ -33,19 +33,19 @@ A path-based Markdown scan found no confirmed missing **file targets** in existi
 ## Priority remediation plan
 
 ### P0 — Documentation trust
-- [ ] Improve root README, contribution policy and security reporting.
-- [ ] Reconcile legacy ADR statuses (do not erase history).
-- [ ] Register Product Bible/PRD release scope decisions.
-- [ ] Add link/heading checks to CI and fix any actual diagnostics.
+- [x] Improve root README, contribution policy and security reporting.
+- [x] Reconcile legacy ADR statuses (do not erase history).
+- [x] Register Product Bible/PRD release scope decisions.
+- [x] Add local-path link validation to CI; fragment/anchor strict mode remains optional pending review.
 
 ### P1 — Implementation precision
-- [ ] Prepare bounded-context blueprints: Identity/Parent Zone, Catalog/Media, Playback/Progress/Offline, Subscriptions/Entitlements.
+- [x] Prepare first bounded-context blueprints: Identity/Parent Zone, Catalog/Media, Playback/Progress/Offline, Subscriptions/Entitlements (draft, code verification still pending).
 - [ ] Add OpenAPI JSON/YAML examples that match API Specification, versioned event payloads and error semantics.
 - [ ] Add field-level privacy mapping and entitlement/download state tables.
 - [ ] Bind important FR/US requirements to architecture, test plans and owners.
 
 ### P2 — Usability and governance
-- [ ] Add clear architecture reference map and label supplemental C4 governance.
+- [x] Add clear architecture reference map and label supplemental C4 governance.
 - [ ] Capture environment setup commands **after** code modules are added.
 - [ ] Review repeated policy text to remove inconsistent copies, not to maximize page count.
 - [ ] Define review cadence and documentation owner for every active area.
@@ -59,3 +59,7 @@ A path-based Markdown scan found no confirmed missing **file targets** in existi
 - Unapproved child safety, billing and privacy assumptions are marked as gated and do not ship by accident.
 
 This audit records verified baseline findings and planned changes, not a claim that every diagram and contract is fully validated.
+
+## Remediation branch and verification
+
+Documentation improvements were committed on **docs/documentation-audit-2026-10**, branched from **main**. New folder READMEs, an executable local Markdown link checker and a CI workflow were added. This audit has not independently validated external links, all fragment IDs, Mermaid rendering, code examples or production behavior. Those remain explicit future verification tasks.

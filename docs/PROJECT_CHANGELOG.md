@@ -4,6 +4,19 @@ Version: 2.0.0
 Status: Active  
 Note: This log covers **documentation**; it does not imply an application release.
 
+## 2026-10-10 — Documentation clarity and coherence audit
+
+The post-merge audit was conducted against main. Work is isolated on branch docs/documentation-audit-2026-10 pending review/merge.
+
+- Added entry-point root README, substantive contributing/security guidance, Product/Legal decision register and auditable remediation list.
+- Reconciled legacy three-digit ADRs with the active four-digit decisions, including superseding the obsolete microservices-first choice.
+- Clarified that Product Bible commitments are not silently removed by P1 prioritization in the PRD.
+- Added directory navigation pages for Product, UX/UI, Architecture, Engineering, DevOps and Testing; expanded the C4 supplemental reference index.
+- Added docs/07_Blueprints with Identity, Catalog, Playback/Offline and Billing/Entitlements implementation plans.
+- Added Python standard-library Markdown link checker, GitHub Actions quality workflow and PR template.
+
+**Validation status:** GitHub commits were created on the audit branch; programmatic link checks should pass in PR CI. External sites, fragment IDs, Mermaid diagrams and code examples require separate review. No production code delivery is implied.
+
 ## 2026-10-10 — Complete remaining documentation placeholders
 
 The documentation foundation branch received detailed replacements for previously brief template files:
