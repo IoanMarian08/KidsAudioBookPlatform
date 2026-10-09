@@ -17,7 +17,7 @@ services:
     environment:
       POSTGRES_DB: kids_audio_dev
       POSTGRES_USER: app
-      POSTGRES_PASSWORD: \${POSTGRES_PASSWORD:?Set dev database password}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set dev database password}
     ports: ["127.0.0.1:5432:5432"]
     volumes: ["pgdata:/var/lib/postgresql/data"]
     healthcheck:
@@ -39,7 +39,7 @@ services:
     image: rabbitmq:3-management
     environment:
       RABBITMQ_DEFAULT_USER: dev
-      RABBITMQ_DEFAULT_PASS: \${RABBITMQ_PASSWORD:?Set dev broker password}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Set dev broker password}
     ports:
       - "127.0.0.1:5672:5672"
       - "127.0.0.1:15672:15672"
@@ -50,7 +50,7 @@ services:
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: devminio
-      MINIO_ROOT_PASSWORD: \${MINIO_ROOT_PASSWORD:?Set dev object password}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set dev object password}
     ports:
       - "127.0.0.1:9000:9000"
       - "127.0.0.1:9001:9001"
@@ -62,7 +62,7 @@ volumes:
   miniodata:
 ~~~
 
-This is a local-only example, **not production configuration**. Pin tested image versions/digests before formalizing the Compose file. MinIO bucket bootstrap, API and worker definitions belong in the repository's actual Compose configuration. Environment-variable escape is shown only to document required values.
+This is a local-only example, **not production configuration**. Pin tested image versions/digests before formalizing the Compose file. MinIO bucket bootstrap, API and worker definitions belong in the repository's actual Compose configuration. Environment variable substitutions enforce required development credentials.
 
 ## 3. Start/stop workflow
 
