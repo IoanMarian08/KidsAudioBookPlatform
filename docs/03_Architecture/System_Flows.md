@@ -7,9 +7,9 @@ Last updated: 2026-07-15
 
 ## 1. Purpose
 
-This document defines the end-to-end behavior of the most important KidsAudioBookPlatform product and operational flows across mobile clients, the administrative dashboard, backend modules, PostgreSQL, Redis, RabbitMQ, object storage, CDN, and external providers.
+This document defines the end-to-end behavior of the most important KidsAudioBookPlatform product and operational flows across mobile clients, the administrative dashboard, independently deployed **backend microservices**, their service-owned logical PostgreSQL databases, Redis, RabbitMQ, object storage, CDN, and external providers.
 
-It complements the structural architecture described in `Software_Architecture.md` and `C4_Model/README.md`. API payloads belong in `API_Specification.md`, event contracts in `Event_Catalog.md`, error codes in `Error_Catalog.md`, and persistence details in `Database_Design.md`.
+It complements the structural architecture described in `Software_Architecture.md`, [Microservices Architecture](Microservices_Architecture.md), [Service Contracts](Microservices_Contracts_and_Flows.md) and `C4_Model/README.md`. Generic descriptions such as **backend validates** refer to the **owning deployed microservice** selected by the gateway, never a monolithic shared application. Cross-service operations require authenticated remote REST/event contracts with local transactions, timeouts and fault handling. API payloads belong in `API_Specification.md`, event contracts in `Event_Catalog.md`, error codes in `Error_Catalog.md`, and persistence details in `Database_Design.md`.
 
 ## 2. Flow Documentation Standard
 

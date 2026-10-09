@@ -36,7 +36,7 @@ This document covers:
 - accessibility and performance;
 - logging, crash reporting, analytics, testing, CI/CD, and release practices.
 
-It does not redefine backend contracts, database design, business ownership, or infrastructure. Those are described in the corresponding architecture documents.
+It does not redefine backend contracts, database design, business ownership, or infrastructure. The server uses independently deployed microservices from the first release ([ADR-0015](../00_Project/ADR/ADR-0015-microservices-from-first-release.md)). The mobile app communicates through stable gateway-routed HTTPS APIs; it never selects private microservice hosts or queries a service database. See [Microservices Contracts and Flows](Microservices_Contracts_and_Flows.md).
 
 ## 3. Architectural Goals
 

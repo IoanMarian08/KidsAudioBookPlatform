@@ -120,6 +120,8 @@ Every consumer must therefore:
 6. classify failures as transient or permanent;
 7. expose processing latency, retry count, and outcome metrics.
 
+**Microservices-first ownership:** Every producing service owns its **own transactional outbox in its own logical PostgreSQL database** and each consumer owns an inbox/idempotency store in its separate logical database. A shared message broker does not imply shared persistence, JPA entities or one backend process. See [ADR-0015](../00_Project/ADR/ADR-0015-microservices-from-first-release.md).
+
 Producer-side publication uses the transactional outbox pattern. A successful domain transaction and its outbox record commit atomically. A relay publishes pending records and marks them published only after broker confirmation.
 
 ## 5. Ordering and Concurrency

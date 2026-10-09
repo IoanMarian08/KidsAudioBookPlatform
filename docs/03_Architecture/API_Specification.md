@@ -25,6 +25,8 @@ The specification establishes:
 
 The generated OpenAPI definition must remain consistent with this document. A mismatch between implementation and documentation blocks release.
 
+**Microservices-first routing:** All paths in this specification are *stable public API paths* exposed through the HTTPS gateway. The owning Java 21/Spring Boot microservice is defined in [Microservices Contracts and Flows](Microservices_Contracts_and_Flows.md). Service implementations deploy separately with their own databases; gateway routing does not grant downstream resource permissions. Cross-service internal endpoints require separate contract definitions before implementation. See [ADR-0015](../00_Project/ADR/ADR-0015-microservices-from-first-release.md).
+
 ## 2. Scope
 
 ### 2.1 Included
