@@ -27,19 +27,21 @@ KidsAudioBookPlatform provides curated narrated stories, timed text and illustra
 
 Safety boundaries are enforced **server-side**, never by merely hiding UI elements. Media uses private object storage and authorized CDN delivery; entitlements use verified store/provider records.
 
+**Current architecture:** independent backend microservices with service-owned databases and REST/RabbitMQ contracts; read the [Microservices Architecture](docs/03_Architecture/Microservices_Architecture.md) before starting backend work.
+
 ## Intended technology baseline
 
 | Surface | Current documented choice |
 |---|---|
 | Mobile | Flutter / Dart |
-| Backend | Java 21, Spring Boot, modular monolith with asynchronous workers |
+| Backend | Java 21, Spring Boot, independently deployed microservices and service-owned workers |
 | Administrative web | React / TypeScript |
 | Data | PostgreSQL; Redis for reconstructible cache/coordination |
 | Messaging | RabbitMQ, transactional outbox, idempotent consumers |
 | Media | Private object storage and CDN |
 | Quality | JUnit, integration/contract/E2E testing, SAST/SCA and observability |
 
-These are architecture decisions, **not evidence that this repository currently builds these applications**. Consult [accepted ADRs](docs/00_Project/ADR/README.md), especially [modular-monolith-first](docs/00_Project/ADR/ADR-0001-modular-monolith-first.md). An older ADR mentioning immediate microservices has been explicitly superseded.
+These are architecture decisions, **not evidence that this repository currently builds these applications**. Consult [accepted ADRs](docs/00_Project/ADR/README.md), especially [ADR-0015 microservices-first](docs/00_Project/ADR/ADR-0015-microservices-from-first-release.md). The former modular-monolith ADR is superseded.
 
 ## Getting involved
 

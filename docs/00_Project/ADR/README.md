@@ -205,7 +205,7 @@ The review verifies that:
 
 | ADR | Decision | Status |
 |---|---|---|
-| [ADR-0001](ADR-0001-modular-monolith-first.md) | Start with a modular monolith | Accepted |
+| [ADR-0001](ADR-0001-modular-monolith-first.md) | Start with a modular monolith (historical) | **Superseded by [ADR-0015](ADR-0015-microservices-from-first-release.md)** |
 | [ADR-0002](ADR-0002-postgresql-primary-system-of-record.md) | Use PostgreSQL as the primary system of record | Accepted |
 | [ADR-0003](ADR-0003-rest-and-rabbitmq-communication.md) | Use REST for synchronous APIs and RabbitMQ for asynchronous events | Accepted |
 | [ADR-0004](ADR-0004-flutter-mobile-platform.md) | Use Flutter for the mobile application | Accepted |
@@ -219,15 +219,16 @@ The review verifies that:
 | [ADR-0012](ADR-0012-flyway-database-migrations.md) | Use Flyway for database migrations | Accepted |
 | [ADR-0013](ADR-0013-versioning-strategy.md) | Apply explicit API, event, and compatibility versioning | Accepted |
 | [ADR-0014](ADR-0014-offline-synchronization.md) | Use operation-based offline synchronization with server authority | Accepted |
+| [ADR-0015](ADR-0015-microservices-from-first-release.md) | Use independently deployable microservices from the first release, with per-service databases | **Accepted — current architecture** |
 
 ## Legacy three-digit ADRs and active replacements
 
-Five early short records use a different numbering convention. They remain in Git history, but they are **not an alternative architecture**. In case of conflict, the later four-digit accepted ADR is authoritative.
+Five early short records use a different numbering convention. They remain in Git history, but they are **not an alternative architecture**. In case of conflict, **ADR-0015 (microservices-first) is authoritative** over superseded ADR-0001 and the early ADR-002. The later four-digit accepted ADR is authoritative.
 
 | Early record | Historical subject | Current interpretation |
 |---|---|---|
 | [ADR-001](ADR-001.md) | Flutter | Superseded by [ADR-0004](ADR-0004-flutter-mobile-platform.md) |
-| [ADR-002](ADR-002.md) | Immediate Spring Boot microservices | **Superseded by [ADR-0001](ADR-0001-modular-monolith-first.md)**; MVP is a modular monolith |
+| [ADR-002](ADR-002.md) | Early Spring Boot microservices direction | Historical early record; **[ADR-0015](ADR-0015-microservices-from-first-release.md) is the accepted current decision** |
 | [ADR-003](ADR-003.md) | PostgreSQL | Superseded by [ADR-0002](ADR-0002-postgresql-primary-system-of-record.md) |
 | [ADR-004](ADR-004.md) | Parent Zone separation | Superseded by [ADR-0006](ADR-0006-parent-zone-security.md) |
 | [ADR-005](ADR-005.md) | Docker-first local development | Compatible legacy practice; follow [Docker Compose guide](../../05_DevOps/Docker_Compose.md) |

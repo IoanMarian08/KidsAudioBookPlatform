@@ -1,9 +1,12 @@
 # ADR-0001: Start with a Modular Monolith
 
-- **Status:** Accepted
+- **Status:** Superseded
 - **Date:** 2026-07-14
 - **Decision owners:** Architecture and Backend Engineering
-- **Last reviewed:** 2026-07-15
+- **Last reviewed:** 2026-10-10
+- **Superseded by:** [ADR-0015 microservices from the first release](ADR-0015-microservices-from-first-release.md)
+
+> **Historical record — NOT the current implementation design.** The product owner chose independently deployable microservices from the start on 2026-10-10. All monolith-first guidance below is retained as historic rationale only. Implement [ADR-0015](ADR-0015-microservices-from-first-release.md), not this ADR.
 
 ## Context
 
