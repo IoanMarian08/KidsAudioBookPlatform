@@ -9,7 +9,7 @@ Last updated: 2026-07-15
 
 This document defines authoritative data ownership across KidsAudioBookPlatform. It complements the C4 views by making ownership, read access, write access, retention, and extraction boundaries explicit.
 
-The matrix applies whether capabilities run inside the initial modular monolith or as independently deployed services later.
+The matrix applies to **independently deployed microservices from the first release** under [ADR-0015](../../00_Project/ADR/ADR-0015-microservices-from-first-release.md). Each business data owner has a **separate logical database**, even when databases share PostgreSQL hosting.
 
 A shared database does not imply shared ownership.
 

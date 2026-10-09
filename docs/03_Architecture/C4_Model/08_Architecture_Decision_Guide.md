@@ -279,35 +279,24 @@ Rules:
 - avoid distributed transactions;
 - define compensation for multi-step workflows.
 
-## 13. Modular monolith versus microservices
+## 13. Microservices-first architecture — current decision
 
-The default architecture is a modular monolith with independently owned bounded contexts and explicit internal contracts.
+**The project is microservices-first by explicit owner decision**, governed by [ADR-0015](../../00_Project/ADR/ADR-0015-microservices-from-first-release.md). Former monolith-first [ADR-0001](../../00_Project/ADR/ADR-0001-modular-monolith-first.md) is superseded. The first backend release must already have independently built, deployed and operated services with isolated logical databases.
 
-A module becomes a microservice only when evidence shows a clear benefit, such as:
+### 13.1 Service boundary decision checklist
 
-- materially different scaling profile;
-- separate release cadence;
-- strong security isolation requirement;
-- distinct availability objective;
-- separate operational ownership;
-- persistent delivery bottlenecks caused by shared deployment;
-- technology requirements that cannot reasonably coexist;
-- high change coupling that cannot be solved through modular design.
+- The boundary corresponds to a cohesive business capability (not a single table or endpoint).
+- One service owns authoritative domain rules and persistence, with its own DB credentials, migrations and restores.
+- Public/internal REST contracts and integration event schemas are documented and versioned.
+- End-user and service-to-service identity/security scopes are enforced at the service boundary.
+- Request deadlines, retries/idempotency and failure behavior are defined.
+- Producers use transactional outboxes and consumers deduplicate locally.
+- Dashboards, alerts, metrics, traces, DLQs and on-call ownership are assigned per service.
+- Local Compose and staging can run and deploy the service independently.
+- Rolling upgrades and backward compatibility work across concurrently deployed service versions.
+- Multi-service workflows use sagas/reconciliation; there is no cross-service transaction.
 
-Do not extract a service solely because a module exists.
-
-### 13.1 Extraction readiness checklist
-
-- Domain boundary is stable.
-- Data ownership is explicit.
-- Public contract is versioned.
-- Events are documented.
-- Consumers tolerate eventual consistency.
-- Observability is sufficient.
-- Deployment and rollback are automated.
-- Failure isolation provides real value.
-- Operational ownership exists.
-- Migration plan has been tested.
+Any future **split, merge or migration between existing services** requires an ADR, data migration strategy and compatibility/rollback plan. Do not reintroduce a monolith to simplify early development.
 
 ## 14. Build versus buy
 
