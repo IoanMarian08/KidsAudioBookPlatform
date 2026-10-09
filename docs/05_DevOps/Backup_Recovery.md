@@ -6,14 +6,16 @@ Owner: Platform/SRE, Security, Data Owners
 
 ## 1. Recovery objectives
 
+**Microservices-first data model:** Each service owns its **own logical PostgreSQL database**, DB user, backup/restore procedure, Flyway history and data lifecycle. A physical PostgreSQL cluster may be shared for cost, but no restore job may silently overwrite a foreign service's data or reuse another service's principal. Cross-service workflows need coordinated recovery ordering and idempotent event reconciliation. See [ADR-0015](../00_Project/ADR/ADR-0015-microservices-from-first-release.md).
+
 Before production, business owners must approve RTO (maximum tolerated outage) and RPO (maximum tolerable data loss) by dataset. Do not advertise untested numeric guarantees. Plan for accidental deletion, migration failure, region outage, credential compromise, media loss and billing reconciliation drift.
 
 ## 2. Data inventory
 
 | Dataset | Source of truth | Recovery approach |
 |---|---|---|
-| Accounts, profiles, progress, catalog | PostgreSQL | Encrypted backups, PITR/WAL, restore drills |
-| Subscriptions and entitlements | PostgreSQL + provider truth | DB restore + provider reconciliation |
+| Identity, profiles, playback, catalog | **Separate service PostgreSQL databases** | Separate encrypted backup/restore targets, PITR/WAL, drills per owner |
+| Subscriptions and entitlements | **billing-service PostgreSQL database** + provider truth | Billing database restore + independent provider reconciliation |
 | Original audio/illustrations | Versioned private object storage | Versioning/replication, integrity manifests |
 | Published derivatives | Object storage | Restore or regenerate from originals |
 | Outbox and broker state | PostgreSQL outbox; durable queues | Reprocess idempotently after restore |
@@ -36,7 +38,7 @@ Before production, business owners must approve RTO (maximum tolerated outage) a
 2. Record source of truth, backup timestamp, target environment, expected RPO impact and rollback plan.
 3. Restore to an isolated environment and verify database consistency and checksum/row-count invariants.
 4. Validate core journeys: parent sign-in, profile ownership, catalog visibility, story authorization and progress.
-5. Reconcile provider purchases/renewals/refunds against authoritative billing events.
+5. Reconcile provider purchases/renewals/refunds **inside billing-service**, and validate dependent service read models against versioned entitlement events.
 6. Rebuild caches, regenerate search indexes and replay outbox/events idempotently.
 7. Cut over traffic using approved ingress/config change; monitor error rate, lag and correctness.
 8. Close incident only after business checks and user impact are documented.
