@@ -91,7 +91,7 @@ Distributed transactions across PostgreSQL, RabbitMQ, Redis, or object storage a
 
 ## Schema Organization
 
-The initial modular monolith may use one PostgreSQL cluster and database, with logical ownership expressed through schemas or consistent table namespaces.
+**Updated by [ADR-0015](ADR-0015-microservices-from-first-release.md):** initial deployment uses **a different logical PostgreSQL database, credential and migration history per microservice**. A PostgreSQL *cluster* can be shared to control cost, but business tables, SQL joins, foreign keys and transactions cannot be shared across services.
 
 Recommended logical areas include:
 
@@ -281,14 +281,14 @@ CI and release validation must include:
 - Good fit for relational catalog, identity, subscription, and audit data.
 - Reduced risk of duplicated or inconsistent entitlement state.
 - Clear durable authority across platform components.
-- Supports gradual extraction through explicit ownership.
+- Supports independent service database ownership and migration from the first release.
 
 ### Negative
 
 - Horizontal scaling requires deliberate design.
 - Schema migrations must be coordinated with rolling deployments.
 - A shared cluster can create noisy-neighbor risks.
-- Strong governance is needed to prevent cross-module coupling.
+- Strong governance is needed to prevent cross-service coupling, shared-database access and incompatible migrations.
 - Large analytical workloads require a separate path.
 
 ## Alternatives Considered
@@ -297,9 +297,9 @@ CI and release validation must include:
 
 Rejected because most core data is relational and benefits from explicit constraints, transactions, and predictable joins. Document storage may still be introduced for a specialized use case with its own ADR.
 
-### Database per module from day one
+### Database per service from day one — now required
 
-Rejected for the initial modular monolith because it increases local, transactional, deployment, and operational complexity. Logical ownership preserves a later extraction path.
+The original monolith-era alternative is **superseded by ADR-0015**. Distinct logical databases and scoped users are mandatory for each independently deployed service; shared infrastructure is allowed. Operational overhead is an accepted product-owner trade-off.
 
 ### Event store as the primary persistence model
 

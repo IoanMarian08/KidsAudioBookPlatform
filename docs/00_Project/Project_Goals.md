@@ -382,7 +382,7 @@ A feature is not considered part of the delivered MVP until it meets `Definition
 
 ### TG-01 — Use an evolvable architecture
 
-The initial backend uses a modular monolith with strict bounded contexts, not premature microservices.
+The initial backend uses **independently deployable Spring Boot microservices**, with isolated data ownership and REST/RabbitMQ integration, as approved in [ADR-0015](ADR/ADR-0015-microservices-from-first-release.md).
 
 The architecture must preserve future extraction through:
 

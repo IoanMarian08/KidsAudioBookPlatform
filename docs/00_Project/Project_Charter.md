@@ -131,7 +131,7 @@ The project follows an incremental delivery model:
 5. release progressively and measure real product behavior;
 6. evolve architecture only when evidence justifies added complexity.
 
-The backend begins as a modular monolith with strict bounded contexts. Service extraction requires documented operational, organizational, security, or scaling evidence.
+The backend begins with **independently deployable Java 21/Spring Boot microservices**, each owning its logical database and migrations, under [ADR-0015](ADR/ADR-0015-microservices-from-first-release.md). Service splits/merges require ADR and compatibility/migration planning; there is no monolith extraction phase.
 
 ## 11. Constraints
 
