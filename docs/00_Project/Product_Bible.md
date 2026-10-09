@@ -2,226 +2,250 @@
 
 | Field | Value |
 |---|---|
-| Version | 1.0.0 |
-| Status | Draft |
+| Version | 2.0.0 |
+| Status | Active |
 | Owner | Ioan Marghioala |
-| Contributors | Ioan Marghioala, ChatGPT |
-| Last Updated | 2026-07-04 |
+| Contributors | Product, Design, Architecture, Engineering |
+| Last Updated | 2026-07-15 |
 | Repository | KidsAudioBookPlatform |
-| Scope | Project Foundation |
+| Scope | Product Foundation |
 
 ---
 
-## Table of Contents
+## 1. Purpose
 
+This document is the canonical product reference for KidsAudioBookPlatform. It defines the product identity, audience, emotional promise, experience model, business model, content rules, safety boundaries, tone, visual direction, and product decision principles.
 
-1. [Product Identity](#product-identity)
-2. [Internal Motto](#internal-motto)
-3. [Product Philosophy](#product-philosophy)
-4. [Audience](#audience)
-5. [Core Experiences](#core-experiences)
-6. [Child Experience](#child-experience)
-7. [Parent Experience](#parent-experience)
-8. [Parent Zone](#parent-zone)
-9. [Child Profiles](#child-profiles)
-10. [Child Room](#child-room)
-11. [Mascot](#mascot)
-12. [Stories](#stories)
-13. [Audio, Text and Illustration Experience](#audio-text-and-illustration-experience)
-14. [Ambient Sounds](#ambient-sounds)
-15. [Free and Premium](#free-and-premium)
-16. [Advertisements](#advertisements)
-17. [Notifications](#notifications)
-18. [Tone of Voice](#tone-of-voice)
-19. [Visual Identity](#visual-identity)
-20. [Safety Rules](#safety-rules)
-21. [Future Product Ideas](#future-product-ideas)
-22. [Product Principles](#product-principles)
+It is intended to align product, design, mobile, backend, content, QA, support, operations, and future collaborators. When a feature proposal conflicts with this document, the proposal must be changed or the Product Bible must be deliberately updated through an approved product decision.
+
+The Product Bible explains what the product is and how it should feel. Detailed implementation rules belong in architecture, API, database, security, and operational documentation.
 
 ---
 
-## Product Identity
+## 2. Product Identity
 
-KidsAudioBookPlatform is a safe story world for children, controlled by parents.
+KidsAudioBookPlatform is a safe, calm, parent-controlled story world for young children.
 
-It is not simply an audiobook catalog. It is not a generic book app. It is not a game. It is a calm, curated and emotionally warm environment where young children can listen to stories, follow text, enjoy illustrations and relax with ambient sounds.
+It combines:
 
-The core emotional mix is:
+- narrated audio stories;
+- synchronized text;
+- story illustrations;
+- series and episodes;
+- child profiles;
+- personalized child rooms;
+- ambient sounds;
+- offline listening;
+- parent controls;
+- free and premium access.
+
+The product is not simply an audiobook catalog. It is not a generic reading application, a social network, an unrestricted content platform, or a game built around rewards and pressure.
+
+The intended emotional mix is:
 
 - safety;
+- warmth;
 - curiosity;
 - adventure;
 - calm;
-- attention.
+- attention;
+- trust.
 
-The product should be especially strong as a bedtime companion.
+The product should be especially strong as a bedtime and quiet-time companion while remaining useful during travel, independent play, learning, and family routines.
 
 ---
 
-## Internal Motto
+## 3. Internal Motto
 
 > A safe world where every evening begins with a story.
 
-This sentence should guide product decisions. If a feature does not support safety, calm, story discovery or parent trust, it should be questioned.
+This motto is an internal decision filter. A feature should be questioned when it does not strengthen at least one of the following:
+
+- child safety;
+- parent trust;
+- story discovery;
+- listening quality;
+- calm routines;
+- product clarity;
+- sustainable business value.
 
 ---
 
-## Product Philosophy
+## 4. Product Promise
 
-The product is built around a simple idea: children should have a magical experience, while parents should have complete control.
+### To children
 
-The application has two worlds:
+A magical, understandable, calm, and safe place where stories are easy to discover and enjoy.
 
-### Child World
+### To parents
 
-A playful, safe and simple environment.
+A trusted application where content, access, subscriptions, notifications, profiles, downloads, and safety settings remain under adult control.
 
-### Parent World
+### To creators
 
-A protected, clean and practical management area.
-
-These two worlds must never be mixed carelessly. A child should not see adult settings, subscriptions, billing flows, admin details or complex controls.
+A future platform where approved stories, narration, illustrations, and educational content can be published through clear workflows and quality standards.
 
 ---
 
-## Audience
+## 5. Product Principles
 
-### Primary Child Audience
+### 5.1 Child First
 
-Children aged 0-7.
+Every child-facing decision must prioritize safety, clarity, emotional comfort, accessibility, and age-appropriate interaction.
 
-This audience requires:
+### 5.2 Parent in Control
 
-- large buttons;
-- simple language;
-- strong visuals;
-- calm animations;
-- short stories;
-- bedtime content;
-- no complex navigation.
+The parent controls accounts, profiles, purchases, subscriptions, security, communication preferences, downloads, and sensitive settings.
 
-### Parent Audience
+### 5.3 Magic Without Complexity
+
+The child experience should feel rich without requiring complex navigation, reading ability, or technical understanding.
+
+### 5.4 Stories Before Gamification
+
+The story is the primary reward. The product must not depend on manipulative streaks, loss aversion, aggressive points, or pressure loops.
+
+### 5.5 Calm by Design
+
+Motion, sound, color, notifications, advertising, and upsell behavior should avoid overstimulation.
+
+### 5.6 Privacy by Default
+
+Only necessary data should be collected. Child-related data must be minimized, protected, and excluded from unnecessary telemetry or marketing.
+
+### 5.7 Clear Commercial Boundaries
+
+Premium value must be understandable. Conversion should come from useful benefits, not confusion, fear, or pressure on children.
+
+### 5.8 Quality Over Volume
+
+A smaller library of well-produced, safe, and coherent stories is preferable to a large inconsistent catalog.
+
+---
+
+## 6. Audience
+
+### 6.1 Primary child audience
+
+The initial product focuses on children aged 0-7.
+
+The experience must support children who:
+
+- cannot read;
+- are beginning to read;
+- have short attention spans;
+- use shared family devices;
+- need large touch targets;
+- require simple navigation;
+- benefit from repetition and predictable layouts;
+- may use the application during bedtime routines.
+
+Suggested internal age bands:
+
+| Age band | Product implications |
+|---|---|
+| 0-2 | Parent-led use, very simple visuals, calming audio, short content |
+| 3-4 | Large controls, strong visual cues, short stories, minimal text dependency |
+| 5-7 | More independent discovery, synchronized text, series, educational themes |
+
+Age bands guide recommendations and design but must not be treated as medical or developmental assessments.
+
+### 6.2 Parent audience
 
 Parents need:
 
-- simplicity;
-- trust;
-- safety;
-- quick setup;
-- control;
-- clear subscription information;
-- contact/support access.
+- fast onboarding;
+- clear privacy and safety information;
+- transparent pricing;
+- reliable playback;
+- predictable controls;
+- easy profile management;
+- simple subscription management;
+- useful support;
+- confidence that children cannot reach adult areas accidentally.
+
+### 6.3 Future audiences
+
+Potential future audiences include:
+
+- kindergartens;
+- schools;
+- therapists or educators;
+- authors;
+- narrators;
+- illustrators;
+- family accounts with older children.
+
+These audiences are not allowed to weaken the simplicity of the initial child and parent experience.
 
 ---
 
-## Core Experiences
+## 7. Two-World Experience Model
 
-The product has the following core experiences:
+The application contains two intentionally different worlds.
 
-1. Account creation.
-2. Child profile creation.
-3. Profile selection.
-4. Child room.
-5. Story discovery.
-6. Story listening.
-7. Text following.
-8. Illustration viewing.
-9. Ambient sound mixing.
-10. Parent Zone.
-11. Subscription upgrade.
-12. Offline access.
-13. Notifications.
-14. Contact/support.
+### 7.1 Child World
 
----
+The Child World is visual, warm, calm, limited, and easy to understand.
 
-## Child Experience
-
-The child experience must feel simple and magical.
-
-The child should see:
+It includes:
 
 - profile selection;
-- personal room;
-- continue story;
-- story categories;
-- favorite stories;
-- search;
-- big story cards;
+- personal Child Room;
+- continue listening;
+- story discovery;
+- favorites;
+- collections and categories;
 - audio player;
+- synchronized text;
 - illustrations;
-- text highlights;
-- ambient sound controls simplified for children.
+- ambient sound access;
+- safe child-facing cards and prompts.
 
-The child must not see:
+It must not expose:
 
 - billing;
-- account email;
-- password;
-- admin controls;
+- email addresses;
+- passwords;
 - subscription management;
-- dangerous settings;
-- delete buttons;
+- destructive controls;
+- account deletion;
 - support forms;
-- raw error messages.
+- administrative controls;
+- raw technical errors;
+- unrestricted external links.
 
----
+### 7.2 Parent World
 
-## Parent Experience
+The Parent World is clear, practical, protected, and information-rich.
 
-The parent experience should be calm, clean and practical.
-
-The parent should be able to:
-
-- manage child profiles;
-- manage subscription;
-- start trial;
-- view offers;
-- access contact/support;
-- configure notifications;
-- see activity;
-- manage offline downloads;
-- configure Parent Zone security;
-- configure app settings.
-
-Parent UI should not be overloaded with toys, stars or playful animations. It should still feel friendly, but more mature.
-
----
-
-## Parent Zone
-
-Parent Zone is a protected area.
-
-Access method:
-
-- PIN required;
-- biometric optional;
-- PIN fallback required.
-
-Parent Zone contains:
+It includes:
 
 - child profile management;
-- subscription;
-- offers;
-- discount announcements;
-- notifications;
-- contact;
-- app settings;
+- subscription and trial management;
+- offers and plan information;
+- notification preferences;
+- download management;
 - security settings;
-- offline downloads;
-- child activity;
-- account deletion.
+- account settings;
+- support access;
+- privacy and deletion requests;
+- child activity summaries where appropriate.
 
-The Parent Zone must have clear boundaries. Children should not enter it accidentally.
+The visual language remains friendly but should not imitate the playful child interface.
 
 ---
 
-## Child Profiles
+## 8. Account and Profile Model
 
-Each child profile has:
+The parent account is the authenticated account owner.
 
-- name;
-- age or date of birth;
+A child profile is not an independent unrestricted account. It exists under the parent account and contains child-specific preferences and listening state.
+
+Each child profile may include:
+
+- display name or nickname;
+- age band or date of birth where justified;
 - avatar;
 - room theme;
 - favorite animal;
@@ -229,153 +253,213 @@ Each child profile has:
 - interests;
 - preferred categories;
 - preferred ambient sound;
-- listening history;
 - favorites;
-- continue listening state;
-- offline downloads.
+- history;
+- continue-listening state;
+- offline downloads;
+- accessibility preferences.
 
-The profile behaves like an independent child experience under the same parent account.
+Premium supports multiple child profiles. The exact free-profile limit is controlled by the active commercial policy.
+
+Profile deletion must require parent authorization and follow data-retention rules.
 
 ---
 
-## Child Room
+## 9. Profile Selection
 
-The Child Room is the main child screen.
+Profile selection should appear after account authentication and on relevant application relaunches.
 
-It replaces the concept of "Home".
+The experience should feel similar to choosing a personal story room rather than selecting a technical user account.
+
+The screen should prioritize:
+
+- large avatars;
+- child names or nicknames;
+- minimal text;
+- a protected parent entry point;
+- no billing or account details.
+
+---
+
+## 10. Child Room
+
+The Child Room is the main child-facing home experience.
 
 It should include:
 
-- greeting;
-- dynamic background;
-- mascot;
+- personal greeting;
+- profile avatar;
+- mascot presence;
 - continue story;
-- story of the day;
-- categories;
-- favorites;
+- story of the day or featured story;
 - recommended stories;
-- ambient sound access.
+- categories;
+- collections;
+- favorites;
+- ambient sound access;
+- recently added content where appropriate.
 
-The room changes by time:
+### Time-based atmosphere
 
-### Morning
+The room background adapts to the local time of day:
 
-Light, fresh, soft sun.
+| Period | Direction |
+|---|---|
+| Morning | Fresh, soft sunlight, light colors |
+| Afternoon | Balanced, playful, clear |
+| Evening | Warm, calm, sunset tones |
+| Night | Dark blue, stars, moon, reduced brightness |
 
-### Afternoon
-
-Balanced and playful.
-
-### Evening
-
-Warm, calm, sunset tones.
-
-### Night
-
-Dark blue, stars, moon, low brightness.
-
-This feature is part of MVP.
+Time-based backgrounds are part of the initial product experience. They must not cause excessive battery usage or visual distraction.
 
 ---
 
-## Mascot
+## 11. Mascot
 
 The mascot is a rabbit.
 
-The rabbit should be:
+The rabbit should feel:
 
 - calm;
 - friendly;
 - expressive;
-- safe-looking;
+- safe;
 - memorable;
-- suitable for both boys and girls;
-- associated with stories and bedtime.
+- inclusive;
+- connected to stories and bedtime.
 
-Possible names:
+The final mascot name is a product decision. Candidate names may include Lumi, Nori, Pufi, Luno, Tupi, or Bubu, but no name is canonical until formally selected.
 
-- Lumi;
-- Nori;
-- Pufi;
-- Luno;
-- Tupi;
-- Bubu.
-
-The mascot can later become:
+The mascot may serve as:
 
 - onboarding guide;
+- story discovery guide;
 - notification personality;
-- animation character;
-- branding element;
-- story character;
-- merchandise identity.
+- loading and empty-state character;
+- brand identity;
+- future story character;
+- future merchandising identity.
+
+The mascot must not pressure children to purchase, return, maintain streaks, or ask adults for money.
 
 ---
 
-## Stories
+## 12. Content Model
 
-Supported content types:
+Supported content structures include:
 
 - standalone stories;
 - series;
 - episodes;
-- short bedtime stories;
+- collections;
+- seasonal collections;
+- bedtime stories;
 - educational stories;
+- calming stories;
 - adventure stories;
 - animal stories;
-- calming stories;
-- seasonal collections.
+- ambient audio tracks.
 
-Each story has:
+Each story should define:
 
 - title;
 - description;
-- audio;
-- text;
+- localized metadata;
+- audio asset;
+- text or transcript;
 - illustrations;
-- age range;
-- category;
-- access type;
+- age recommendation;
+- categories;
 - duration;
-- status;
-- series reference if applicable;
-- episode number if applicable.
+- access type;
+- publication status;
+- series and episode references where applicable;
+- content warnings where appropriate;
+- language;
+- narrator and creator credits;
+- synchronization data;
+- offline eligibility.
+
+All public content must pass editorial and safety review before publication.
 
 ---
 
-## Audio Text and Illustration Experience
+## 13. Story Experience
 
-The product should support audio + synchronized text + illustrations.
+The core experience combines audio, synchronized text, and illustrations.
 
-Text synchronization in MVP may be segment-based. Each segment has:
+### MVP synchronization
+
+Segment-level synchronization is sufficient for the MVP. A segment may contain:
 
 - text;
 - start time;
 - end time;
-- optional illustration.
+- optional illustration reference;
+- optional speaker or scene metadata.
 
-This allows:
+This enables:
 
 - highlighted text;
-- image changes during playback;
-- better attention;
-- reading support.
+- illustration changes;
+- resume behavior;
+- accessible reading support;
+- consistent playback state.
 
-Future versions may support word-level synchronization.
+Word-level synchronization may be introduced later when content production and technical validation justify it.
+
+### Player expectations
+
+The player should support:
+
+- play and pause;
+- seek with child-safe controls;
+- previous and next segment where appropriate;
+- continue listening;
+- playback progress persistence;
+- sleep timer in a later phase or MVP if capacity allows;
+- independent ambient-sound volume;
+- offline playback for entitled content;
+- lock-screen and background controls where supported.
+
+The player must not be cluttered with technical controls.
 
 ---
 
-## Ambient Sounds
+## 14. Discovery and Recommendation
 
-Ambient sounds are a major product feature.
+Discovery should be understandable and safe.
 
-Supported sounds may include:
+Primary discovery mechanisms include:
+
+- categories;
+- age bands;
+- collections;
+- series;
+- search;
+- favorites;
+- recently listened;
+- continue listening;
+- editorial recommendations;
+- time-of-day suggestions.
+
+Recommendations should initially rely on transparent editorial and behavioral rules. Advanced personalization may be introduced later after privacy, quality, and explainability review.
+
+The product must not create filter bubbles that repeatedly expose children to only one narrow content type.
+
+---
+
+## 15. Ambient Sounds
+
+Ambient sounds are a first-class product capability, not decorative background audio.
+
+Potential sounds include:
 
 - white noise;
 - rain;
 - waves;
 - forest;
-- night;
+- night ambience;
 - wind;
 - heartbeat;
 - fireplace;
@@ -384,125 +468,215 @@ Supported sounds may include:
 - train;
 - river.
 
-The user should be able to control:
+Ambient sounds may be used:
 
-- story volume;
-- ambient sound volume.
+- inside the Child Room;
+- during story playback;
+- as standalone sleep audio;
+- during bedtime preparation.
 
-Ambient sounds may run:
+The child or parent may control story and ambient volume separately.
 
-- in the Child Room;
-- during a story;
-- before sleep.
+Audio mixing must avoid sudden volume changes and must respect device audio policies.
 
 ---
 
-## Free and Premium
+## 16. Parent Zone
 
-### Free
+Parent Zone is the protected adult area.
 
-Free users receive:
+Access requires:
 
-- 50 free stories;
-- advertisements after defined listening sessions;
-- limited offline access or no offline;
-- limited profiles;
-- access to basic features.
+- parent PIN;
+- optional device biometrics;
+- PIN fallback;
+- short-lived parent elevation;
+- recent re-authentication for high-risk operations.
 
-### Premium
+Parent Zone may contain:
 
-Premium users receive:
+- profiles;
+- subscriptions;
+- trial information;
+- offers;
+- notifications;
+- contact and support;
+- downloads;
+- account settings;
+- security settings;
+- privacy settings;
+- child activity summaries;
+- account deletion and export actions.
 
-- all stories;
-- no ads;
+The application must never rely on a simple swipe, arithmetic puzzle, or hidden button as the primary security boundary.
+
+---
+
+## 17. Free and Premium Model
+
+### 17.1 Free
+
+The intended free experience includes:
+
+- approximately 50 free stories at launch;
+- one or a limited number of child profiles;
+- core playback capabilities;
+- selected ambient sounds;
+- controlled advertising;
+- limited or no offline access according to active policy.
+
+The free tier must remain useful and trustworthy. It should demonstrate product value without intentionally creating a broken experience.
+
+### 17.2 Premium
+
+Premium includes:
+
+- complete eligible story catalog;
+- no advertisements;
 - offline downloads;
 - multiple profiles;
-- premium series;
+- premium series and collections;
 - full ambient sound access;
-- complete experience.
+- enhanced personalization and future premium capabilities.
 
-Premium subscription options:
+### 17.3 Subscription options
 
-- monthly;
-- yearly;
-- 3-day trial.
+Initial options:
+
+- monthly subscription;
+- annual subscription;
+- three-day trial.
+
+Exact prices, regional availability, trial eligibility, grace periods, and store-specific rules are configuration and commercial policy, not hard-coded product assumptions.
 
 ---
 
-## Advertisements
+## 18. Advertising
 
-Ads must be soft and controlled.
+Advertising is allowed only for eligible free users.
 
-Rules:
+Core rules:
 
-- only for free users;
 - never interrupt a story in the middle;
-- shown after two listening sessions;
-- recommended duration: 15 seconds;
-- followed by gentle Premium upsell;
-- must not be aggressive;
-- must not trick children into clicking;
-- must be age-appropriate.
+- target a maximum of one advertisement after every two completed listening sessions under the initial policy;
+- recommended ad duration is approximately 15 seconds;
+- suppress immediately after Premium activation;
+- avoid manipulative countdowns or fake controls;
+- do not encourage children to click;
+- do not use unsafe external links;
+- do not use behavioral advertising based on child data;
+- do not expose inappropriate categories;
+- provide a gentle parent-directed Premium message.
 
-Example upsell:
+Example:
 
-> Want stories without ads? Ask a parent to upgrade to Premium.
+> Want stories without ads? Ask a parent to open Parent Zone.
+
+The advertising policy must remain configurable and auditable.
 
 ---
 
-## Notifications
+## 19. Offline Experience
 
-Notifications should be stored in the database for each user.
+Premium users may download eligible stories for offline use.
 
-Types:
+Offline capabilities should include:
 
-- bedtime reminder;
-- new story;
-- offer;
+- resumable downloads;
+- download status;
+- storage awareness;
+- checksum validation;
+- protected local storage;
+- synchronized progress after reconnection;
+- clear handling of expired or revoked entitlements;
+- graceful operation without connectivity.
+
+Security-sensitive decisions remain server-authoritative, with only a documented offline grace policy where necessary.
+
+---
+
+## 20. Notifications
+
+Notifications are primarily addressed to the parent account.
+
+Supported categories include:
+
+- security;
+- account;
 - subscription;
-- system;
+- billing;
+- new content;
+- bedtime reminders;
+- download status;
+- service announcements;
 - support;
-- child activity.
+- optional marketing.
 
-Tone should be warm:
-
-- "A new adventure is waiting for Matei."
-- "It is story time."
-- "The bedtime story is ready."
-
-Notifications must be configurable in Parent Zone.
-
----
-
-## Tone of Voice
-
-### For Children
-
-Simple, warm and magical.
+Child-facing prompts should remain inside the child experience and must be safe, non-commercial, and non-pressuring.
 
 Examples:
 
-- "Who is listening today?"
-- "Shall we continue the story?"
-- "Where are we going today?"
-- "The characters are waiting."
+- “A new adventure is waiting.”
+- “It is story time.”
+- “The bedtime story is ready.”
 
-### For Parents
-
-Clear, practical and calm.
-
-Examples:
-
-- "Manage child profiles"
-- "Subscription settings"
-- "Safety settings"
-- "Contact support"
+Parents must be able to configure optional categories and channels. Security or legally required communication may remain mandatory.
 
 ---
 
-## Visual Identity
+## 21. Tone of Voice
 
-Recommended palette:
+### 21.1 Child-facing tone
+
+The child-facing voice is:
+
+- simple;
+- warm;
+- magical;
+- encouraging;
+- calm;
+- concrete.
+
+Examples:
+
+- “Who is listening today?”
+- “Shall we continue the story?”
+- “Where are we going today?”
+- “The characters are waiting.”
+
+Avoid:
+
+- guilt;
+- urgency;
+- fear;
+- complex technical language;
+- purchase pressure;
+- excessive exclamation marks.
+
+### 21.2 Parent-facing tone
+
+The parent-facing voice is:
+
+- clear;
+- practical;
+- calm;
+- transparent;
+- respectful.
+
+Examples:
+
+- “Manage child profiles”
+- “Subscription settings”
+- “Safety settings”
+- “Contact support”
+
+Billing, privacy, security, and deletion text must prioritize clarity over marketing language.
+
+---
+
+## 22. Visual Identity
+
+### Recommended palette direction
 
 - Midnight Blue;
 - Warm Cream;
@@ -512,77 +686,287 @@ Recommended palette:
 - Sky Blue;
 - Warm Brown.
 
-Recommended typography:
+### Typography direction
 
-- Nunito for UI;
-- Baloo 2 for titles;
-- Atkinson Hyperlegible for long text if needed.
+- Nunito for general UI;
+- Baloo 2 or an approved rounded display typeface for selected titles;
+- Atkinson Hyperlegible or another accessibility-focused typeface where long reading requires it.
 
-Illustration style:
+### Illustration direction
 
 - digital watercolor;
 - soft edges;
 - pastel colors;
 - warm light;
 - gentle characters;
+- consistent visual language;
 - no aggressive shadows;
-- no scary realism;
-- consistent style across stories.
+- no disturbing realism;
+- no frightening imagery for young audiences.
+
+Visual decisions must also support contrast, readability, reduced motion, and accessibility.
 
 ---
 
-## Safety Rules
+## 23. Safety and Privacy Rules
 
-The product must never allow children to:
+Children must never be able to:
 
-- buy subscriptions;
+- purchase subscriptions;
+- change billing;
 - delete profiles;
-- access account settings;
-- contact support;
-- see invoices;
-- manage ads;
-- access admin content;
-- interact with strangers.
+- delete accounts;
+- contact support independently;
+- access invoices;
+- change security settings;
+- manage advertisements;
+- access administrative content;
+- communicate with strangers;
+- publish public content;
+- open unrestricted external links.
 
-The product should avoid:
+The product must avoid:
 
-- scary messages;
-- complex error screens;
+- unmoderated public content;
+- public comments;
+- chat;
+- location sharing;
+- manipulative engagement loops;
 - aggressive advertising;
-- unsafe external links;
-- unmoderated content.
+- raw system errors;
+- unnecessary collection of child data;
+- personalized advertising based on child behavior.
+
+Child names, raw tokens, PINs, sensitive account data, and unnecessary personal information must not appear in operational logs or analytics.
 
 ---
 
-## Future Product Ideas
+## 24. Accessibility
 
-Future features:
+Accessibility is part of product quality, not a later add-on.
 
-- author dashboard;
-- AI story generation;
-- personalized child stories;
-- kindergarten accounts;
+The product should support:
+
+- large touch targets;
+- readable typography;
+- strong contrast;
+- screen-reader labels for parent flows;
+- reduced-motion preferences;
+- predictable navigation;
+- captions or transcripts where available;
+- audio-first use;
+- minimal reliance on color alone;
+- understandable error recovery.
+
+Child flows should be tested with limited reading ability and motor precision in mind.
+
+---
+
+## 25. Error and Empty-State Experience
+
+Child-facing errors should be calm and actionable.
+
+Examples:
+
+- “This story needs the internet right now.”
+- “We could not start the story. Let us try again.”
+- “This download is not ready yet.”
+
+Errors must not reveal technical details, identifiers, stack traces, provider names, or security information.
+
+Empty states should guide the next safe action without pressure.
+
+---
+
+## 26. Support Experience
+
+Support is parent-facing and accessible from Parent Zone.
+
+Support should cover:
+
+- account access;
+- billing and subscription questions;
+- playback problems;
+- download problems;
+- content concerns;
+- privacy requests;
+- account deletion;
+- safety reports.
+
+Support records must be auditable and must minimize child-related personal data.
+
+---
+
+## 27. Admin and Editorial Experience
+
+The administrative dashboard supports approved staff, not children or normal parent users.
+
+It should enable:
+
+- content creation and editing;
+- story, series, and episode management;
+- upload and processing workflows;
+- metadata and age recommendation management;
+- review and approval;
+- publication and scheduling;
+- archive and correction;
+- collection management;
+- notification and campaign management;
+- support workflows;
+- audit access according to role.
+
+High-risk administrative actions require explicit authorization, reason capture, and audit logging.
+
+---
+
+## 28. MVP Product Scope
+
+The MVP is expected to include:
+
+- parent account registration and authentication;
+- child profiles;
+- profile selection;
+- Child Room;
+- time-based backgrounds;
+- story catalog;
+- story details;
+- audio playback;
+- segment-synchronized text;
+- illustrations;
+- favorites;
+- continue listening;
+- series and episodes;
+- categories and collections;
+- Parent Zone;
+- free and Premium entitlement rules;
+- approximately 50 free stories;
+- three-day trial;
+- monthly and annual Premium options;
+- controlled advertisements for free users;
+- offline downloads for Premium;
+- notifications;
+- contact and support;
+- administrative content workflow.
+
+MVP scope may be reduced only through an explicit product decision that records impact and follow-up.
+
+---
+
+## 29. Non-Goals for MVP
+
+The following are not MVP goals:
+
+- social networking;
+- user-to-user chat;
+- public comments;
+- public user-generated content;
+- livestreaming;
+- video-first content;
+- open creator marketplace;
+- complex creator payouts;
+- production AI-generated stories without editorial control;
+- heavy gamification;
+- child accounts independent of a parent;
+- unrestricted web browsing;
+- real-time multiplayer experiences.
+
+---
+
+## 30. Future Product Directions
+
+Potential future capabilities include:
+
 - multilingual content;
+- author and creator dashboards;
+- personalized stories with strict parent controls;
+- AI-assisted editorial tools;
 - educational journeys;
+- kindergarten or school accounts;
 - advanced recommendations;
-- mascot animations;
-- evolving child rooms;
-- rewards;
+- richer mascot animation;
+- evolving Child Rooms;
 - bedtime routines;
-- breathing exercises;
-- meditation for children.
+- breathing and relaxation exercises;
+- family sharing;
+- accessibility-focused content modes;
+- creator collaboration workflows.
+
+Future ideas remain hypotheses until validated through research, safety review, commercial analysis, and architecture review.
 
 ---
 
-## Product Principles
+## 31. Product Decision Checklist
 
-Every feature should be tested against:
+Before approving a feature, confirm:
 
-1. Does this help the child?
-2. Does this keep the parent in control?
-3. Does this preserve the magic?
-4. Does this avoid unnecessary complexity?
-5. Is it safe?
-6. Is it performant?
-7. Can it scale?
-8. Is it documented?
+1. Does it improve the child or parent experience?
+2. Is it safe for children aged 0-7?
+3. Can a child reach an adult-only action?
+4. Does it collect more data than necessary?
+5. Is the commercial behavior transparent?
+6. Does it preserve calm and clarity?
+7. Is the feature understandable without instructions?
+8. Does it work with multiple profiles?
+9. Does it behave correctly offline or during partial failure?
+10. Is the feature accessible?
+11. Is it observable and supportable?
+12. Does it have a clear owner and success measure?
+
+A feature that fails safety, privacy, or parent-control checks must not ship.
+
+---
+
+## 32. Canonical Decisions
+
+The following decisions are currently canonical:
+
+- target child audience: ages 0-7;
+- authenticated principal: parent account;
+- child profiles exist under the parent account;
+- mobile platforms: iOS and Android;
+- shared mobile implementation: Flutter;
+- mascot: rabbit;
+- free catalog target: approximately 50 stories;
+- Premium options: monthly and annual;
+- trial: three days;
+- free advertising policy: approximately one ad after every two completed listening sessions;
+- advertisements never interrupt stories;
+- offline downloads: Premium;
+- multiple profiles: Premium;
+- child experience and Parent Zone are strictly separated;
+- Parent Zone uses PIN with optional biometrics;
+- notifications are persisted and configurable;
+- product values: safety, curiosity, adventure, calm, and attention.
+
+---
+
+## 33. Related Documents
+
+- `README.md`
+- `Project_Charter.md`
+- `Project_Goals.md`
+- `Definition_of_Done.md`
+- `ADR/README.md`
+- `../03_Architecture/Software_Architecture.md`
+- `../03_Architecture/Mobile_Architecture.md`
+- `../03_Architecture/Security_Architecture.md`
+- `../03_Architecture/Notifications.md`
+- `../03_Architecture/Admin_Dashboard.md`
+
+---
+
+## 34. Maintenance Rules
+
+This document must be reviewed when:
+
+- the target audience changes;
+- pricing or tier structure changes materially;
+- the advertising policy changes;
+- a new user type is introduced;
+- child safety rules change;
+- the Parent Zone model changes;
+- a major content type is introduced;
+- product positioning changes;
+- a future idea becomes committed scope.
+
+Changes must preserve a clear distinction between validated decisions, current scope, and future hypotheses.
