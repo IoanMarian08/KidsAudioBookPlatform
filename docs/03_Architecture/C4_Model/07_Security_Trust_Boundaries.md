@@ -9,7 +9,7 @@ Last reviewed: 2026-07-14
 
 This document defines the security-oriented C4 view for KidsAudioBookPlatform. It identifies trust boundaries, sensitive assets, privileged components, authentication and authorization checkpoints, and the controls required when data crosses from one boundary to another.
 
-This view complements:
+This view represents **independently deployed microservices with per-service databases from the first release** ([ADR-0015](../../00_Project/ADR/ADR-0015-microservices-from-first-release.md)). Shared PostgreSQL hosting does not imply shared database access. This view complements:
 
 - `Security_Architecture.md`;
 - `01_System_Context.md`;
@@ -32,80 +32,60 @@ This view complements:
 
 ## 3. Primary trust boundaries
 
-```mermaid
+~~~mermaid
 flowchart TB
-    subgraph UserDevices[Untrusted User Device Boundary]
-        Mobile[Flutter Mobile App]
-        AdminBrowser[Administrator Browser]
-        LocalStorage[(Encrypted Local Storage)]
-    end
+  Mobile[Flutter Mobile App] --> Edge[HTTPS / WAF / API Gateway]
+  AdminBrowser[Admin Browser] --> Edge
+  subgraph Services[Private independently deployed microservices]
+    ID[identity-service]
+    Profiles[profiles-service]
+    Catalog[catalog-service]
+    Media[media-service and workers]
+    Playback[playback-service]
+    Billing[billing-service and workers]
+    Notifications[notifications-service and workers]
+    Admin[admin-service]
+  end
+  Edge --> ID
+  Edge --> Profiles
+  Edge --> Catalog
+  Edge --> Media
+  Edge --> Playback
+  Edge --> Billing
+  Edge --> Notifications
+  Edge --> Admin
+  Playback --> Profiles
+  Playback --> Catalog
+  Playback --> Billing
+  Playback --> Media
+  subgraph Data[Private state: distinct service owners]
+    PG[(Distinct logical PostgreSQL databases)]
+    Broker[(RabbitMQ isolated routing)]
+    Cache[(Redis namespaced)]
+    Object[(Private media object storage)]
+    Keys[Secrets manager]
+  end
+  ID --> PG
+  Profiles --> PG
+  Catalog --> PG
+  Media --> PG
+  Playback --> PG
+  Billing --> PG
+  Notifications --> PG
+  Admin --> PG
+  Media --> Object
+  Catalog --> Broker
+  Billing --> Broker
+  Broker --> Notifications
+  ID --> Keys
+  Billing --> Keys
+  Media --> Keys
+  Mobile --> CDN[CDN signed media]
+  Object --> CDN
+~~~
 
-    subgraph Edge[Public Edge Boundary]
-        DNS[DNS]
-        CDN[CDN]
-        WAF[WAF / Rate Limiter]
-        Gateway[API Gateway / Reverse Proxy]
-    end
+**Security invariant:** Each PostgreSQL arrow represents a service-owned logical database and scoped credential, never permission to query a foreign database. Every service validates end-user resource ownership and peer workload identity; gateway authentication alone does not authorize downstream mutations. External Apple/Google, push, email and admin providers require their own narrowly scoped adapters and credentials.
 
-    subgraph Application[Private Application Boundary]
-        API[Spring Boot API]
-        Worker[Background Workers]
-        Auth[Identity and Access]
-        ParentZone[Parent Zone Authorization]
-        AdminAuth[Administrative Authorization]
-    end
-
-    subgraph Data[Protected Data Boundary]
-        PG[(PostgreSQL)]
-        Redis[(Redis)]
-        MQ[(RabbitMQ)]
-        Object[(Object Storage)]
-        Secrets[Secrets Manager]
-    end
-
-    subgraph Observability[Restricted Observability Boundary]
-        Metrics[Prometheus]
-        Logs[Loki / Log Store]
-        Traces[Trace Store]
-        Audit[(Audit Records)]
-    end
-
-    subgraph External[External Provider Boundary]
-        Apple[Apple App Store]
-        Google[Google Play]
-        FCM[Firebase Cloud Messaging]
-        Email[Email Provider]
-    end
-
-    Mobile -->|TLS| WAF
-    AdminBrowser -->|TLS + MFA| WAF
-    CDN -->|Signed media request| Object
-    WAF --> Gateway
-    Gateway -->|Authenticated request| API
-    API --> Auth
-    API --> ParentZone
-    API --> AdminAuth
-    API --> PG
-    API --> Redis
-    API --> MQ
-    API --> Object
-    Worker --> PG
-    Worker --> MQ
-    Worker --> Object
-    API --> Secrets
-    Worker --> Secrets
-    API --> Metrics
-    API --> Logs
-    API --> Traces
-    API --> Audit
-    Worker --> Metrics
-    Worker --> Logs
-    Worker --> Traces
-    API --> Apple
-    API --> Google
-    Worker --> FCM
-    Worker --> Email
-```
 
 ## 4. Asset classification
 

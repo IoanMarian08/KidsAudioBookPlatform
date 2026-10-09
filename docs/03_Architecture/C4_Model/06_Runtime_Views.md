@@ -9,7 +9,7 @@ Last reviewed: 2026-07-14
 
 This document complements the static C4 diagrams with runtime views for the most important user and administrative flows in KidsAudioBookPlatform.
 
-The runtime views show how containers and components collaborate during real requests, where trust boundaries are crossed, which operations are synchronous or asynchronous, and where failure handling is required.
+The runtime views show how independently deployed microservices collaborate during real requests, where trust boundaries are crossed, which operations are synchronous or asynchronous, and where failure handling is required. **Every diagram's generic 'Owning service API' participant is the specific service for that flow, not one shared Spring Boot backend**; its database is the owning service's separate logical PostgreSQL database. Gateway routing and service-to-service network calls are expanded in [Microservices Contracts and Flows](../Microservices_Contracts_and_Flows.md) under [ADR-0015](../../00_Project/ADR/ADR-0015-microservices-from-first-release.md).
 
 ## 2. Scope
 
@@ -51,7 +51,7 @@ sequenceDiagram
     autonumber
     actor Parent
     participant Mobile as Flutter Mobile App
-    participant API as Spring Boot API
+    participant API as Owning Service API
     participant Identity as Identity Component
     participant DB as PostgreSQL
     participant Redis as Redis
@@ -95,7 +95,7 @@ sequenceDiagram
 sequenceDiagram
     autonumber
     participant Mobile as Flutter Mobile App
-    participant API as Spring Boot API
+    participant API as Owning Service API
     participant Identity as Identity Component
     participant DB as PostgreSQL
     participant Redis as Redis
@@ -127,7 +127,7 @@ sequenceDiagram
     autonumber
     actor Parent
     participant Mobile as Flutter Mobile App
-    participant API as Spring Boot API
+    participant API as Owning Service API
     participant Profiles as Profile Component
     participant DB as PostgreSQL
     participant Redis as Redis
@@ -151,7 +151,7 @@ sequenceDiagram
     autonumber
     actor Child
     participant Mobile as Flutter Mobile App
-    participant API as Spring Boot API
+    participant API as Owning Service API
     participant Home as Home Aggregation Component
     participant Redis as Redis
     participant Catalog as Catalog Component
@@ -193,7 +193,7 @@ sequenceDiagram
     autonumber
     actor Child
     participant Mobile as Flutter Mobile App
-    participant API as Spring Boot API
+    participant API as Owning Service API
     participant Catalog as Catalog Component
     participant Entitlements as Subscription Component
     participant Playback as Playback Component
@@ -238,7 +238,7 @@ sequenceDiagram
 sequenceDiagram
     autonumber
     participant Mobile as Flutter Mobile App
-    participant API as Spring Boot API
+    participant API as Owning Service API
     participant Playback as Playback Component
     participant DB as PostgreSQL
     participant Outbox as Outbox Table
@@ -279,7 +279,7 @@ sequenceDiagram
     actor Child
     participant Mobile as Flutter Mobile App
     participant Local as Local Secure Storage
-    participant API as Spring Boot API
+    participant API as Owning Service API
     participant Playback as Playback Component
     participant Entitlements as Subscription Component
     participant DB as PostgreSQL
@@ -314,7 +314,7 @@ sequenceDiagram
     actor Parent
     participant Mobile as Flutter Mobile App
     participant Store as Apple / Google Store
-    participant API as Spring Boot API
+    participant API as Owning Service API
     participant Billing as Subscription Component
     participant DB as PostgreSQL
     participant MQ as RabbitMQ
@@ -376,7 +376,7 @@ sequenceDiagram
     autonumber
     actor Admin
     participant AdminUI as Admin Dashboard
-    participant API as Spring Boot API
+    participant API as Owning Service API
     participant AdminComp as Administration Component
     participant Media as Media Component
     participant Storage as Object Storage
@@ -474,7 +474,7 @@ sequenceDiagram
     autonumber
     actor Parent
     participant Mobile as Flutter Mobile App
-    participant API as Spring Boot API
+    participant API as Owning Service API
     participant Identity as Identity Component
     participant Privacy as Privacy Orchestrator
     participant DB as PostgreSQL
@@ -596,7 +596,7 @@ Before approving a new runtime flow, verify:
 - [ ] Sensitive information is excluded from logs.
 - [ ] Metrics and alerting signals are identified.
 - [ ] The mobile client can recover from network interruption.
-- [ ] The flow remains valid if it is later split across microservices.
+- [ ] The flow operates between independently deployed services, including authenticated remote calls, isolated databases and remote-failure cases from the first release.
 
 ## 21. Related documents
 
