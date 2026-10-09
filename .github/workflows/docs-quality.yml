@@ -2,6 +2,7 @@ name: Documentation quality
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, edited]
     paths:
       - '**/*.md'
       - 'scripts/check_docs.py'
