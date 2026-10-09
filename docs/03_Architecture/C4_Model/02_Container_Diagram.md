@@ -9,79 +9,82 @@ Last reviewed: 2026-07-14
 
 This document defines the C4 Level 2 container view for KidsAudioBookPlatform. It shows the major deployable and runtime building blocks, their responsibilities, their communication paths, and the boundaries that must remain stable as the system evolves.
 
-The initial implementation may be deployed as a modular monolith with supporting infrastructure, while preserving module boundaries that allow selected capabilities to be extracted into independent services later.
+The initial implementation consists of **independently deployable microservices**, each with its own logical database and contracts, per [ADR-0015](../../00_Project/ADR/ADR-0015-microservices-from-first-release.md). The edge gateway is a router and policy enforcement point, not a monolithic backend.
 
 ## 2. Container overview
 
-```mermaid
-flowchart LR
-    Parent[Parent User]
-    Child[Child User]
-    Admin[Admin / Content Manager]
-
-    Mobile[Flutter Mobile App]
-    AdminWeb[Admin Web Application]
-    Api[Spring Boot Backend API]
-    Worker[Background Worker Runtime]
-    Scheduler[Scheduled Job Runtime]
-
-    Postgres[(PostgreSQL)]
+~~~mermaid
+flowchart TB
+  Parent[Parent / Child] --> Mobile[Flutter Mobile App]
+  AdminUser[Admin / Editor] --> AdminWeb[React Admin Dashboard]
+  Mobile --> Gateway[HTTPS API Gateway]
+  AdminWeb --> Gateway
+  subgraph S[Independently deployable Spring Boot services]
+    Identity[identity-service]
+    Profiles[profiles-service]
+    Catalog[catalog-service]
+    Media[media-service]
+    Playback[playback-service]
+    Billing[billing-service]
+    Notifications[notifications-service]
+    Admin[admin-service]
+  end
+  Gateway --> Identity
+  Gateway --> Profiles
+  Gateway --> Catalog
+  Gateway --> Media
+  Gateway --> Playback
+  Gateway --> Billing
+  Gateway --> Notifications
+  Gateway --> Admin
+  Playback --> Profiles
+  Playback --> Catalog
+  Playback --> Billing
+  Playback --> Media
+  Catalog --> MQ[(RabbitMQ)]
+  Billing --> MQ
+  MQ --> Notifications
+  subgraph Data[Shared hosting, isolated ownership]
+    DB[(Separate service PostgreSQL DBs)]
     Redis[(Redis)]
-    Rabbit[(RabbitMQ)]
-    ObjectStorage[(Object Storage)]
-    CDN[CDN]
+    Storage[(Object Storage)]
+  end
+  Identity --> DB
+  Profiles --> DB
+  Catalog --> DB
+  Media --> DB
+  Playback --> DB
+  Billing --> DB
+  Notifications --> DB
+  Admin --> DB
+  Media --> Storage
+  Storage --> CDN[CDN]
+  Mobile --> CDN
+~~~
 
-    Store[Apple App Store / Google Play]
-    Push[FCM / APNs]
-    Payment[Subscription Providers]
-    Analytics[Analytics / Observability Platform]
-
-    Parent --> Mobile
-    Child --> Mobile
-    Admin --> AdminWeb
-
-    Mobile -->|HTTPS / JSON| Api
-    AdminWeb -->|HTTPS / JSON| Api
-
-    Api --> Postgres
-    Api --> Redis
-    Api --> Rabbit
-    Api --> ObjectStorage
-    Api --> Payment
-    Api --> Analytics
-
-    Worker --> Rabbit
-    Worker --> Postgres
-    Worker --> Redis
-    Worker --> ObjectStorage
-    Worker --> Push
-    Worker --> Analytics
-
-    Scheduler --> Postgres
-    Scheduler --> Rabbit
-    Scheduler --> Analytics
-
-    ObjectStorage --> CDN
-    Mobile -->|Audio and images| CDN
-    AdminWeb -->|Controlled uploads| ObjectStorage
-
-    Store --> Mobile
-```
+**Every arrow to PostgreSQL represents that service's own logical database and credential, never cross-service database access.** RabbitMQ producers/consumers use own transactional outbox/inbox. See [Microservices Architecture](../Microservices_Architecture.md) and [Contracts](../Microservices_Contracts_and_Flows.md).
 
 ## 3. Container inventory
 
-| Container | Technology | Primary responsibility | Owns persistent data |
+| Deployable/Infrastructure | Technology | Responsibility | Stateful ownership |
 |---|---|---|---|
-| Flutter Mobile App | Flutter / Dart | Child and parent user experience, playback, local cache, offline behavior | Local preferences, downloaded media metadata, pending synchronization |
-| Admin Web Application | Web SPA | Content administration, moderation, operational management | Browser-local temporary state only |
-| Backend API | Java 21 / Spring Boot | Authentication, authorization, business workflows, catalog, profiles, subscriptions, playback authorization | Through PostgreSQL and object storage |
-| Background Worker Runtime | Java 21 / Spring Boot worker | Asynchronous notifications, media processing, indexing, retries, outbox consumption | Processing state and job results |
-| Scheduled Job Runtime | Java 21 / Spring Scheduler or managed jobs | Reconciliation, cleanup, retention, subscription verification, periodic maintenance | Job execution metadata |
-| PostgreSQL | PostgreSQL | Transactional source of truth | Accounts, profiles, catalog metadata, progress, entitlements, notifications, audit data |
-| Redis | Redis | Cache, rate limiting, short-lived sessions, distributed coordination | Ephemeral derived data only |
-| RabbitMQ | RabbitMQ | Reliable asynchronous messaging and work distribution | Durable messages until acknowledged or expired |
-| Object Storage | S3-compatible storage | Audio, artwork, generated derivatives, controlled uploads | Binary media and immutable assets |
-| CDN | Managed CDN | Efficient media delivery and edge caching | Cached copies only |
+| Flutter mobile | Flutter/Dart | Child and parent navigation, audio and offline UI | Device cache under parent profile |
+| Admin SPA | React/TypeScript | Privileged editorial and support UI | No primary business data |
+| API Gateway | HTTPS ingress / routing | Routing, rate limits, correlation and edge checks | No business database |
+| identity-service | Java 21/Spring Boot | Parent sessions, identity, Parent Zone proof | identity_db |
+| profiles-service | Java 21/Spring Boot | Child profiles, parental settings | profiles_db |
+| catalog-service | Java 21/Spring Boot | Stories, publishing, collections, search | catalog_db |
+| media-service | Java 21/Spring Boot + own workers | Asset uploads, safe processing, CDN grants | media_db + private object store |
+| playback-service | Java 21/Spring Boot | Playback grants, progress, offline sync | playback_db |
+| billing-service | Java 21/Spring Boot + own workers | Store verification, subscriptions, entitlements | billing_db |
+| notifications-service | Java 21/Spring Boot + own workers | Inbox, preferences, push/email delivery | notifications_db |
+| admin-service | Java 21/Spring Boot | Audit, support and admin orchestration | admin_db |
+| advertising-policy-service | Gated Java/Spring Boot service | Optional child-safe post-session policy | Separate advertising_db, not enabled until approved |
+| PostgreSQL | Managed cluster or instance | **Independent logical database per service** | Durable service-owned records |
+| Redis | Managed cache | Derived/cache and coordination per service namespace | Disposable data |
+| RabbitMQ | Durable message broker | Versioned at-least-once events | Durable pending messages |
+| Object storage/CDN | Private S3-compatible storage + CDN | Protected original media and signed delivery | Media-owned assets |
+
 
 ## 4. Flutter Mobile App
 
@@ -133,112 +136,29 @@ The admin interface is a separate container because it has a different threat mo
 - browser sessions use secure, short-lived tokens;
 - no object-storage credentials are exposed to the browser.
 
-## 6. Backend API
+## 6. API Gateway and Domain Microservices
 
-The backend API is the authoritative application boundary for synchronous operations.
+The gateway routes each public API path to its service owner. Each service enforces access control and communicates with peers only through explicit internal REST/OpenAPI or versioned RabbitMQ event contracts. A gateway check cannot replace downstream ownership, Parent Zone or entitlement validation.
 
-### Core responsibilities
+Service boundaries and contracts are defined in [ADR-0015](../../00_Project/ADR/ADR-0015-microservices-from-first-release.md) and [Microservices Contracts and Flows](../Microservices_Contracts_and_Flows.md). Every service ships a distinct image, independent health checks, migrations, logs/metrics/traces, least-privileged DB user, tests and deployment configuration.
 
-- authenticate accounts and device sessions;
-- authorize account, parent, child, author, and admin operations;
-- manage user accounts and child profiles;
-- expose catalog and search read models;
-- issue playback authorization and signed media URLs;
-- validate subscription entitlements;
-- persist playback progress;
-- manage favorites, history, and recommendations inputs;
-- create notifications and asynchronous work requests;
-- record audit and domain events;
-- enforce API validation, rate limits, and idempotency.
+## 7. Service-Owned Background Workers
 
-### Internal structure
+Media scan/transcode, notifications, billing reconciliation and catalog scheduling run as workers **owned by the relevant service**, deployed independently from its HTTP replicas when useful. There is no single shared business worker with unrestricted access to all databases.
 
-The container must be organized by bounded context rather than by technical layer alone. Expected modules include:
+All handlers are idempotent, retry with bounded backoff and dead-letter persistent failures. Business state mutation and outbox insert share a local transaction; consumer effects and inbox dedup share the consumer's database.
 
-- Identity and Access;
-- Family and Profiles;
-- Catalog;
-- Media;
-- Playback;
-- Progress;
-- Subscription and Entitlements;
-- Notifications;
-- Administration;
-- Audit and Compliance;
-- Shared Platform capabilities.
+## 8. Service-Owned Scheduled Jobs
 
-### Communication rules
+Each domain service owns its reconciliation, cleanup, retention, backfill and publication jobs. Distributed locks or managed-job singleton controls prevent duplicate execution where necessary. A scheduler never queries a different service's private database.
 
-- mobile and admin clients communicate through versioned HTTPS APIs;
-- PostgreSQL is used for transactional state;
-- Redis is used only for replaceable, derived, or short-lived state;
-- RabbitMQ is used for asynchronous work and integration events;
-- object storage is accessed through SDKs or signed upload/download flows;
-- external providers are called through dedicated integration adapters.
-
-## 7. Background Worker Runtime
-
-The worker container executes operations that should not block user-facing requests.
-
-### Workloads
-
-- push-notification delivery;
-- email delivery where introduced;
-- audio validation and transcoding;
-- image resizing and derivative generation;
-- search-index updates;
-- analytics event forwarding;
-- subscription reconciliation;
-- publication side effects;
-- data exports;
-- cleanup and retention tasks triggered through queues.
-
-### Reliability requirements
-
-- consumers are idempotent;
-- every message has a stable event or job identifier;
-- retries use exponential backoff with jitter;
-- exhausted messages move to a dead-letter queue;
-- poison messages do not block healthy work;
-- processing outcome is observable through metrics and structured logs;
-- message acknowledgement occurs only after the durable state change succeeds.
-
-## 8. Scheduled Job Runtime
-
-Scheduled jobs are separated conceptually from request processing and queue consumers because they have different load and failure characteristics.
-
-### Typical jobs
-
-- subscription-provider reconciliation;
-- expired-session cleanup;
-- stale upload cleanup;
-- notification scheduling;
-- outbox recovery;
-- content publication activation;
-- retention-policy enforcement;
-- audit-data archiving;
-- recommendation-model refresh;
-- operational consistency checks.
-
-A scheduled job must be safe to run more than once. Distributed locking is required when multiple replicas could execute the same schedule.
 
 ## 9. PostgreSQL
 
-PostgreSQL is the transactional source of truth.
+PostgreSQL is the transactional platform. **Each microservice has a separate logical database**, schema migrations, DB user, connection pool, backup/restore owner and data lifecycle. Multiple logical databases may share one physical managed PostgreSQL cluster for cost reasons.
 
-### Data ownership
+Allowed cross-service references are stable IDs carried over API/event contracts and consuming service-owned projections. **Direct joins, shared JPA entities, cross-database foreign keys and service-to-service SQL access are forbidden** even on a shared physical cluster. Cross-service operations rely on local transactions and sagas/outbox/inbox, not distributed ACID transactions.
 
-Each bounded context owns its tables and migrations. Cross-module access must use application interfaces or approved read models rather than arbitrary direct repository access.
-
-### Rules
-
-- Flyway manages schema evolution;
-- foreign keys protect local relational integrity;
-- optimistic locking is used for concurrent mutable aggregates where appropriate;
-- outbox records are committed in the same transaction as domain state;
-- large binary media is never stored in PostgreSQL;
-- read-heavy projections may use dedicated tables or materialized views;
-- personally identifiable data is minimized and classified.
 
 ## 10. Redis
 
@@ -390,63 +310,43 @@ No request is trusted because it originates from an official client. Authorizati
 
 ### Initial deployment
 
-The recommended first production topology is:
+First production deployments consist of the API gateway plus **independent deployments** of identity, profiles, catalog, media, playback, billing, notifications and admin services. Workers and scheduled jobs are attached to their owning services, not to a shared monolith. Advertising-policy-service is disabled unless compliance gates pass.
 
-- one backend API deployment with multiple replicas;
-- one worker deployment with independent scaling;
-- one scheduled-job deployment with leader or distributed locking;
-- managed PostgreSQL;
-- managed Redis;
-- managed RabbitMQ or equivalent broker;
-- managed object storage and CDN;
-- centralized logs, metrics, and traces.
+Managed PostgreSQL can host isolated databases, with managed RabbitMQ, Redis, object storage, CDN and centralized logs/metrics/traces. Each deployable has its own build, version, health probes, secrets, resource limits and rollback.
 
 ### Scaling model
 
-| Container | Primary scaling signal |
+| Deployable | Primary scaling signal |
 |---|---|
-| Backend API | Request rate, p95 latency, CPU, thread saturation |
-| Workers | Queue depth, oldest-message age, processing latency |
-| Scheduler | Job duration, missed schedules, lock contention |
-| PostgreSQL | CPU, IOPS, active connections, lock waits, slow queries |
-| Redis | Memory, hit ratio, latency, evictions |
-| RabbitMQ | Queue depth, consumer utilization, publish rate |
-| CDN | Cache hit ratio, origin egress, edge errors |
+| Gateway | Edge RPS and saturation |
+| Identity | Login/refresh p95, security challenge throughput |
+| Profiles | Profile lookups and ownership-check p95 |
+| Catalog | Browse/query p95 and index freshness |
+| Media | Scan/transcode backlog, upload volume, signing errors |
+| Playback | Grant/progress p95 and request concurrency |
+| Billing | Purchase verification latency, provider reconciliation lag |
+| Notifications | Queue age, delivery retry/DLQ and provider quotas |
+| Admin | Privileged request latency and audit backlog |
+| Per-service databases | CPU, IOPS, connections, locks, restore health |
+| Shared broker/cache/CDN | Queue age, cache hit/error, signed delivery errors |
 
-## 16. Failure scenarios
+## 16. Distributed failure scenarios
 
-| Failure | Expected behavior |
+| Failure | Safe behavior |
 |---|---|
-| Redis unavailable | Bypass cache for essential reads; restrict security-sensitive flows if required |
-| RabbitMQ unavailable | Persist outbox data and recover publication later |
-| Push provider unavailable | Retry asynchronously; do not block user transactions |
-| Object storage unavailable | Prevent new uploads; preserve metadata; return controlled playback error |
-| CDN degraded | Use approved origin fallback only where operationally safe |
-| Subscription provider unavailable | Apply documented entitlement grace policy |
-| Analytics unavailable | Drop or buffer approved telemetry; never block playback |
-| Worker backlog | Scale workers, apply back-pressure, prioritize critical queues |
-| PostgreSQL unavailable | Fail fast, reject writes safely, expose health status, avoid retry storms |
+| Redis unavailable | Authoritative service DB fallback or fail closed for high-risk decisions |
+| RabbitMQ unavailable | Producer outboxes retain work; replay when broker recovers |
+| Notifications/ads unavailable | Core eligible playback proceeds, optional side effects delayed |
+| Catalog or profile authority unavailable | Deny *new* unsafe playback grants; bounded retry and user-facing fallback |
+| Billing authority unavailable | No unverified new Premium grants; apply only explicitly approved grace policy |
+| Media/CDN unavailable | Existing player state preserved, controlled retry/error; never leak private assets |
+| One service DB unavailable | Only owning service fails; no foreign service database access workaround |
+| Worker backlog | Per-service scaling, DLQ and alarms; no cross-domain job purges |
 
-## 17. Evolution toward microservices
+## 17. Microservices evolution
 
-A container is not automatically a microservice. Extraction is justified only when a bounded context requires independent scaling, deployment, ownership, security, or reliability.
+**Microservices are the initial architecture, not a future extraction goal.** Adding, merging or splitting deployables requires an ADR, database migration, versioned contract plan, independent rollout, compatibility tests and operational ownership. A new service is created for a justified bounded context, not merely for an entity or endpoint.
 
-Likely future extraction candidates:
-
-1. Notifications;
-2. Media Processing;
-3. Search and Recommendations;
-4. Subscription and Entitlements;
-5. Analytics Ingestion.
-
-Before extraction, the module must already have:
-
-- explicit APIs;
-- independent data ownership;
-- integration events;
-- no direct repository access from other modules;
-- observability and operational ownership;
-- contract and migration tests.
 
 ## 18. Container-level quality requirements
 
