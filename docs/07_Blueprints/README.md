@@ -16,6 +16,9 @@ These documents bridge **product intentions** and **implementable module tasks**
 | 2 | [Catalog and Media](02_Catalog_Media.md) | Identity, content/admin roles, object storage | Review/publish, signed upload and takedown tests |
 | 3 | [Playback and Offline](03_Playback_Offline.md) | Profiles, Catalog, Media, Entitlements | Stream authorization, progress conflict and offline grant tests |
 | 4 | [Subscriptions and Entitlements](04_Subscriptions_Entitlements.md) | Identity, store sandbox adapters | Verified purchase, refund/replay, restore and reconciliation tests |
+| 5 | [Notifications](05_Notifications.md) | Identity and domain events | Inbox, consent, device registration, retry/DLQ tests |
+| 6 | [Privacy and Deletion](06_Privacy_Deletion.md) | Identity, all data owners | Cross-domain erasure/retention and offline device tests |
+| 7 | [Advertising Eligibility (gated)](07_Advertising_Eligibility.md) | Playback + entitlements + legal approval | Ad disabled by default; policy and safety tests before activation |
 
 **Parallel work:** identity scaffolding, catalog editorial model and provider adapter interfaces can develop in parallel once contracts are agreed. Playback monetization authorization needs the entitlement policy contract even before store integrations are live.
 
