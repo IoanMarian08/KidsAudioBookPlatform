@@ -27,9 +27,9 @@ KidsAudioBookPlatform is a mobile-first audio storytelling platform for children
 
 The product supports narrated stories, synchronized text, multiple illustrations, series, episodes, categories, editorial collections, playback progress, ambient audio, a free tier, premium subscriptions, a three-day trial, offline downloads, carefully constrained advertising, persistent notifications, and administrative content operations.
 
-The architecture must support future localization, author workflows, larger content catalogs, advanced recommendations, and service extraction without forcing premature distributed-system complexity into the MVP.
+The architecture must support localization, new content formats and further independent services without compromising the already distributed microservices baseline.
 
-**Status and scope:** This document describes the intended architecture, not deployed production software. The three-day trial, ad policy, profile quotas and final rollout depend on explicit Product/Legal approval, as captured in the [Decision Register](../00_Project/DECISION_REGISTER.md). The [Product Bible](../00_Project/Product_Bible.md) defines intended MVP capabilities; staging priorities in the PRD do not silently replace that scope. [ADR-0001](../00_Project/ADR/ADR-0001-modular-monolith-first.md) supersedes the older legacy ADR-002 that proposed immediate microservices.
+**Status and scope:** This document describes the intended architecture, not deployed production software. The three-day trial, ad policy, profile quotas and final rollout depend on explicit Product/Legal approval, as captured in the [Decision Register](../00_Project/DECISION_REGISTER.md). The [Product Bible](../00_Project/Product_Bible.md) defines intended MVP capabilities; staging priorities in the PRD do not silently replace that scope. [ADR-0015](../00_Project/ADR/ADR-0015-microservices-from-first-release.md) supersedes the former modular-monolith ADR-0001 and is the accepted decision for separately deployed microservices.
 
 ## 3. Architecture Principles
 
@@ -37,8 +37,8 @@ The platform follows these principles:
 
 1. **Child safety is a system property.** It is enforced through navigation, authorization, data minimization, content workflow, and operational controls.
 2. **The server is authoritative.** Subscription status, entitlement decisions, profile ownership, publication state, and advertising eligibility are never trusted solely from the client.
-3. **Domain boundaries precede deployment boundaries.** Modules are designed as bounded contexts before they are extracted into separate services.
-4. **Start with a modular monolith.** Independent services are introduced only when scale, ownership, reliability, or release cadence justify them.
+3. **Bounded contexts have deployment and data ownership.** Each core domain is implemented in an independently deployable microservice, with cohesive responsibilities.
+4. **Microservices from the first release.** Each service has its own artifact, schema migrations, logical PostgreSQL database, service identity, tests and release pipeline.
 5. **Media does not flow through application servers.** Audio and images are delivered through object storage and CDN using controlled URLs.
 6. **Asynchronous work is explicit.** Slow, retryable, or fan-out operations use messaging and workers.
 7. **Every privileged action is auditable.** Administrative and support actions produce immutable audit records.
@@ -57,42 +57,24 @@ The platform follows these principles:
 | Offline listening | Download manifests, device association, revocation, and synchronization are first-class concerns |
 | Editorial publishing | Explicit draft, review, scheduled, published, suspended, and archived states |
 | Multiple profiles | Progress and recommendations are always scoped to a child profile |
-| Small initial team | Operational simplicity is prioritized over premature microservices |
-| Future growth | Clear bounded contexts and extractable adapters |
+| Small initial team | Standardized service templates, Compose development, automation and shared observability keep deliberate microservices overhead manageable |
+| Future growth | Independently deployable services with versioned contracts and isolated state |
 | Compliance and trust | Data minimization, retention rules, auditability, and incident readiness |
 
 ## 5. Architecture Style
 
 ### 5.1 Initial deployment model
 
-The initial backend is a **modular monolith with asynchronous workers**. It may be deployed as:
+**The initial backend is microservices-first, not a modular monolith.** The first release uses separate Spring Boot applications for identity, profiles, catalog, media, playback, billing, notifications and admin operations. An advertising-policy service is optional and gated by child-safety/legal/store approval. Shared infrastructure consists of PostgreSQL hosting **independent logical service databases**, RabbitMQ, Redis and private object storage/CDN. Workers are owned by their services and may scale separately.
 
-- one consumer/admin API application;
-- one worker application;
-- PostgreSQL;
-- Redis;
-- RabbitMQ;
-- object storage;
-- observability services.
+### 5.2 Service boundaries and runtime
 
-The codebase remains modular even when modules share a process. Modules communicate through application interfaces or published domain events, never by directly accessing another module's internal repository or tables.
+Use the [canonical Microservices Architecture](Microservices_Architecture.md) and [ADR-0015](../00_Project/ADR/ADR-0015-microservices-from-first-release.md) for the list of deployables and database ownership. REST/OpenAPI is used for immediate authorized queries; RabbitMQ versioned events and an outbox/inbox per service are used for state propagation and retryable jobs. All remote calls have deadlines, least-privilege service identity and failure policy.
 
-### 5.2 Evolution model
+### 5.3 Deliberately accepted complexity
 
-A module may be extracted into an independent service when one or more of the following become true:
+The owner has chosen independent deployment and storage boundaries despite the overhead of multi-service observability, contract testing, network failures, eventual consistency, and more CI/DevOps work. Do not collapse core services into one application to simplify local development. Avoid the opposite extreme: one service per table, per endpoint or per class.
 
-- it requires independent scaling;
-- it has a different reliability target;
-- it changes at a significantly different rate;
-- it is owned by a separate team;
-- it needs independent deployment for risk reduction;
-- its workload is operationally distinct, such as media processing or notifications.
-
-Likely early extraction candidates are media processing, notifications, subscription reconciliation, search, and analytics.
-
-### 5.3 Rejected starting point
-
-The project does not begin with a service per domain noun. That would introduce distributed transactions, local-development friction, deployment overhead, monitoring burden, and contract-management cost before the product has evidence that those costs are justified.
 
 ## 6. System Context
 
@@ -129,49 +111,53 @@ The authenticated parent account is the security principal. A selected child pro
 
 ## 7. Container Architecture
 
-```mermaid
-graph TB
-    subgraph Clients
-        Mobile[Flutter Mobile App]
-        AdminUI[Admin Web Dashboard]
-    end
+~~~mermaid
+flowchart TB
+  Mobile[Flutter Mobile App]
+  AdminUI[React Admin Dashboard]
+  G[HTTPS API Gateway]
+  subgraph Microservices[Independently deployable Spring Boot services]
+    I[identity-service]
+    P[profiles-service]
+    C[catalog-service]
+    M[media-service]
+    Play[playback-service]
+    Bill[billing-service]
+    N[notifications-service]
+    Admin[admin-service]
+  end
+  subgraph Data[Shared infrastructure; isolated service ownership]
+    PG[(PostgreSQL: separate databases)]
+    R[(Redis: isolated cache namespaces)]
+    MQ[(RabbitMQ: versioned events)]
+    O[(Private object storage)]
+  end
+  CDN[CDN]
+  Mobile --> G
+  AdminUI --> G
+  G --> I
+  G --> P
+  G --> C
+  G --> M
+  G --> Play
+  G --> Bill
+  G --> N
+  G --> Admin
+  Play --> P
+  Play --> C
+  Play --> Bill
+  Play --> M
+  Bill --> MQ
+  C --> MQ
+  MQ --> N
+  Microservices --> PG
+  Microservices --> R
+  M --> O
+  O --> CDN
+  Mobile --> CDN
+~~~
 
-    subgraph Edge
-        Gateway[API Gateway / Reverse Proxy]
-    end
-
-    subgraph Runtime
-        API[Backend API Application]
-        Worker[Background Worker Application]
-    end
-
-    subgraph Data
-        PG[(PostgreSQL)]
-        Redis[(Redis)]
-        MQ[(RabbitMQ)]
-        Object[(Object Storage)]
-    end
-
-    subgraph Delivery
-        CDN[CDN]
-        FCM[Push Provider]
-        Stores[Store Purchase APIs]
-    end
-
-    Mobile --> Gateway
-    AdminUI --> Gateway
-    Gateway --> API
-    API --> PG
-    API --> Redis
-    API --> MQ
-    Worker --> MQ
-    Worker --> PG
-    Worker --> Object
-    Object --> CDN
-    Mobile --> CDN
-    Worker --> FCM
-    API --> Stores
-```
+The infrastructure diagram groups distinct PostgreSQL logical databases under one cluster for readability; **it does not authorize direct cross-service SQL access**. See [Microservices Contracts](Microservices_Contracts_and_Flows.md) for the runtime sequences and ownership matrix.
 
 ### 7.1 Flutter mobile application
 
@@ -186,13 +172,13 @@ The application owns presentation, local state, secure token storage, media play
 
 The dashboard is a privileged operational product, not a consumer UI with hidden buttons. It uses dedicated routes, stricter authorization, detailed audit logging, and workflow-specific permissions.
 
-### 7.3 Backend API application
+### 7.3 API Gateway and backend services
 
-The API application exposes consumer and administrative APIs. Shared deployment does not imply shared authorization or shared module internals. Consumer and admin endpoints remain separated by route namespace, policy, rate limits, and tests.
+The gateway routes stable public paths to the owning independently deployed service; it does not implement business rules. Each service authenticates/authorizes requests server-side and owns its databases, APIs, integration events, CI and observability. Administrative privileges have separate authorization boundaries.
 
-### 7.4 Worker application
+### 7.4 Service-owned workers
 
-Workers process media, notifications, scheduled publication, subscription reconciliation, cleanup, retry queues, and analytics aggregation. All handlers must be idempotent and safe under redelivery.
+Media processing, notifications, publication, subscription reconciliation, cleanup and analytics run in independently scaled workers owned by the responsible service. They never share an unrelated service's database. Handlers are idempotent and safe under redelivery.
 
 ## 8. Bounded Contexts
 
@@ -263,30 +249,24 @@ Mandatory rules:
 - controllers call application use cases, not repositories;
 - domain objects do not depend on Spring, JPA, RabbitMQ, or provider SDKs;
 - JPA entities are persistence representations, not public API contracts;
-- one module may not import another module's persistence package;
-- cross-module reads use published application interfaces or dedicated read models;
-- cross-module writes use commands, domain services, or events;
+- one service may not import another service's persistence package or domain JPA entities;
+- cross-service reads use versioned REST application contracts or service-owned event-fed read models;
+- cross-service writes use authorized REST commands or RabbitMQ messages; never direct foreign-database SQL;
 - package-private visibility is preferred for internal implementation types;
 - architecture tests must enforce forbidden dependencies.
 
 Example package shape:
 
 ```text
-com.kidsaudiobook
-  identity/
-    api/
-    application/
-    domain/
-    infrastructure/
-  catalog/
-    api/
-    application/
-    domain/
-    infrastructure/
-  playback/
-  entitlements/
-  subscriptions/
-  notifications/
+services/
+  identity-service/src/main/java/.../{api,application,domain,infrastructure}
+  profiles-service/src/main/java/.../{api,application,domain,infrastructure}
+  catalog-service/src/main/java/.../{api,application,domain,infrastructure}
+  media-service/src/main/java/.../{api,application,domain,infrastructure}
+  playback-service/src/main/java/.../{api,application,domain,infrastructure}
+  billing-service/src/main/java/.../{api,application,domain,infrastructure}
+  notifications-service/src/main/java/.../{api,application,domain,infrastructure}
+  admin-service/src/main/java/.../{api,application,domain,infrastructure}
 ```
 
 ## 10. Communication Patterns
@@ -302,7 +282,7 @@ Use synchronous calls when the caller needs an immediate answer to continue the 
 - updating progress;
 - reading notification state.
 
-Inside the modular monolith, these are in-process application-interface calls. After service extraction, the same conceptual contract may become HTTP or gRPC, but that is not assumed prematurely.
+These are **remote service boundaries from the start**. Use contract-tested internal REST requests for synchronous decisions and versioned RabbitMQ integration events for asynchronous propagation; no in-process cross-domain application calls.
 
 ### 10.2 Asynchronous communication
 
@@ -343,8 +323,8 @@ Each bounded context owns its write model. Even when contexts share one PostgreS
 Rules:
 
 - no module writes another module's tables;
-- foreign keys across schemas are used only when ownership and lifecycle are stable;
-- reporting joins are read-only and isolated from transactional logic;
+- cross-service foreign keys and database joins are forbidden even when service databases share a PostgreSQL instance;
+- cross-service reporting uses event-fed read models or an explicitly governed analytics pipeline;
 - shared concepts are referenced by stable IDs, not duplicated mutable objects;
 - Redis is never the system of record;
 - object storage contains binary media, while PostgreSQL contains authoritative metadata;
@@ -516,7 +496,7 @@ Scaling priorities:
 4. asynchronous workers for slow tasks;
 5. horizontal API and worker replicas;
 6. read replicas for reporting and heavy catalog reads;
-7. service extraction only when operational evidence supports it.
+7. independent service scaling and release compatibility monitored from the first release.
 
 Partitioning is considered for high-volume append-only tables such as playback events, notification attempts, audit records, and provider webhook history.
 
@@ -594,22 +574,12 @@ A change requires an ADR when it introduces or replaces:
 
 Pull requests that alter architecture must update the relevant document, diagrams, OpenAPI, event catalog, error catalog, and implementation roadmap.
 
-## 23. Service Extraction Playbook
+## 23. Service Evolution Playbook
 
-When extracting a module:
+Microservices exist from the first release. There is **no modular-monolith extraction phase**. Changes to service boundaries require an ADR, a data ownership/migration plan, compatibility windows, new event/API contract tests, staged deployment and rollback strategy. Moving functionality between services must preserve the public routes, data deletion responsibilities, observability and security.
 
-1. confirm a measurable reason;
-2. identify owned tables and events;
-3. introduce an explicit module API if one does not exist;
-4. remove direct cross-module persistence access;
-5. add contract tests;
-6. replicate data through events where needed;
-7. move tables or introduce a dedicated schema/database;
-8. deploy behind stable routing;
-9. compare behavior and metrics;
-10. remove the old in-process path only after verification.
+Typical evolution steps: validate the need, define new owner and database, expand compatible contracts, migrate data through controlled backfill, dual-read/compare where permitted, switch traffic, remove obsolete consumers and verify independent recovery. See [ADR-0015](../00_Project/ADR/ADR-0015-microservices-from-first-release.md).
 
-A service extraction is complete only when ownership, operations, data recovery, alerting, and on-call responsibility are clear.
 
 ## 24. Quality Attribute Scenarios
 
