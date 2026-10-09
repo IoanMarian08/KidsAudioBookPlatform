@@ -24,11 +24,11 @@ External App Store/Play APIs and push/email providers use recorded sandbox contr
 - Confirm indexes for critical queries with representative data where warranted.
 - Verify rollback on expected exception and safe replay after an interrupted operation.
 
-## 4. Cross-service REST contract and security tests
+### Cross-service REST contract and security tests
 
 Validate REST compatibility for old/new service versions, end-user and workload identity, downstream profile/Parent Zone ownership, request-deadline propagation and failure mapping. Simulate peer timeout, 503, circuit-open, stale projection and gateway bypass. Producer/consumer releases must be independently deployable without lockstep. Include explicit negative tests against service database boundaries.
 
-## 5. Messaging and outbox tests
+## 4. Messaging and outbox tests
 
 ~~~mermaid
 sequenceDiagram
