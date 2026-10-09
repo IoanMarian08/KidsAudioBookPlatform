@@ -64,7 +64,7 @@ A milestone may advance only if:
 |---|---|---|
 | Store billing uncertainty | Sandbox errors or inconsistent notifications | Reconciliation worker, signed provider proof and trials in sandbox |
 | Content supply bottleneck | Catalog below launch threshold | Editorial pipeline and rights tracking first |
-| Excessive engineering scope | Slow P0 throughput | Defer AI/microservices, favor modular monolith |
+| Distributed architecture delivery overhead | Delayed service foundation or integration failures | Use cohesive microservices, standard CI/deployment templates, local Compose, contract tests and per-service monitoring per ADR-0015 |
 | Child safety violation | Unexpected route or asset exposure | Parent-gate and catalog authorization suites |
 | Audio egress cost | CDN cost per play exceeds forecast | Bitrate policies, cache hit monitoring, capacity model |
 | Poor offline synchronization | Frequent conflict/support incidents | Versioned progress events and device tests |
