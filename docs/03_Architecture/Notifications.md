@@ -429,23 +429,21 @@ Marketing emails require unsubscribe support that does not require login.
 
 ## 19. In-app inbox
 
-The in-app inbox is the durable presentation layer for notifications.
+The inbox is the durable, account-scoped presentation layer for notifications. The **canonical public API contract is [API Specification](API_Specification.md) §§41–43**; historical PATCH-style endpoints below are replaced by the following routes:
 
-Required API capabilities:
+~~~text
+GET     /api/v1/notifications
+POST    /api/v1/notifications/{notificationId}/read
+POST    /api/v1/notifications/read-all
+DELETE  /api/v1/notifications/{notificationId}
+GET     /api/v1/notification-preferences
+PUT     /api/v1/notification-preferences
+PUT     /api/v1/devices/{deviceId}
+DELETE  /api/v1/devices/{deviceId}
+~~~
 
-```text
-GET    /api/v1/notifications
-GET    /api/v1/notifications/unread-count
-PATCH  /api/v1/notifications/{id}/read
-POST   /api/v1/notifications/read-all
-PATCH  /api/v1/notifications/{id}/dismiss
-GET    /api/v1/notification-preferences
-PUT    /api/v1/notification-preferences
-```
+GET /notifications is cursor-paginated and supports status/category filters. Mark-as-read, read-all and dismissal are account-scoped and idempotent. An unread-count endpoint is **not** in the current API contract; implementing one requires a coordinated API and contract-test update rather than assuming it exists.
 
-Lists use cursor or keyset pagination ordered by creation time and ID. Access is restricted to the authenticated account.
-
-Mark-as-read operations are idempotent.
 
 ## 20. Deep links
 

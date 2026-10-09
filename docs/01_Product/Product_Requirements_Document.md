@@ -42,7 +42,7 @@ The parent owns the account and controls child profiles. Profile selection is no
 | PRD-14 | Localization and accessibility | P1 | Supported locales have complete tested critical flows |
 | PRD-15 | Recommendations | P2 | Start with editorial rules, not opaque profiling of children |
 
-P0 is a release blocker. P1 can be phased unless a market launch explicitly depends on it. P2 is not required for MVP.
+**Priority interpretation and MVP scope conflict:** P0/P1/P2 describe implementation and verification order, **not an automatic change to the Product Bible's expected MVP scope**. The [Product Bible](../00_Project/Product_Bible.md) includes synchronized text, illustrations, ambient sound, notifications, offline downloads, a three-day trial and controlled free-tier ads in the intended MVP. Product approval is required to remove or defer any of these from the actual launch. P1 items may be implemented after core P0 work, but they cannot be excluded from launch solely because they are P1. Trial pricing/eligibility, advertisement activation and jurisdiction-specific legal/store compliance remain separately gated. Track unresolved scope and policy choices in the [Decision Register](../00_Project/DECISION_REGISTER.md), especially DEC-003, DEC-004 and DEC-006.
 
 ## 4. User journeys and acceptance criteria
 
