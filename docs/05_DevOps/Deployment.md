@@ -6,38 +6,38 @@ Owner: DevOps / Release Engineering
 
 ## 1. Scope
 
-Deploy the Spring Boot API, worker, admin dashboard, object/media configurations, and supporting infrastructure. Mobile apps are delivered via Apple/Google app stores and require separate rollout/compatibility planning.
+Deploy **each independently built Spring Boot microservice** (identity, profiles, catalog, media, playback, billing, notifications, admin) through the API gateway, plus its service-owned workers, admin dashboard, and supporting infrastructure. No single backend API artifact contains the whole business system. Mobile apps are delivered via Apple/Google app stores and require separate rollout/compatibility planning.
 
 ## 2. Release prerequisites
 
 - Change set reviewed and linked to issue/PR/ADR where needed.
 - Automated CI security, unit, integration, API contract and acceptance gates pass.
 - Immutable image digest and SBOM available.
-- Database migration checked on staging snapshot and rollback/forward-fix designed.
+- The affected **owning service's** logical database migration has been tested against a staging snapshot; contract compatibility with prior/new consumer versions is proven.
 - New configuration and secrets validated; required flags default off.
 - Relevant SLO dashboards and incident responder known.
 - Current backup and successful restore exercise are within policy.
 
 ## 3. Safe release sequence
 
-1. Announce release window/owner and record previous deployment digest.
+1. Announce the affected microservice(s), contract versions, release window/owner and previous per-service digest.
 2. Run non-destructive preflight: DB connectivity, queues, storage, provider connectivity, free capacity.
-3. Apply additive migrations where the release requires new columns/tables/indexes; avoid long locks.
-4. Deploy new API/worker replicas in rolling or canary mode with readiness gating.
+3. Apply additive migrations **only to each deploying service's database**; do not mutate schemas owned by peers. Avoid long locks.
+4. Deploy only the affected service and its owned workers with independent canary/rolling readiness checks. Keep older service versions compatible with other live producers/consumers.
 5. Execute smoke suite: login, profile, catalog, playback grant, progress, verified entitlement sandbox path and admin access.
-6. Watch p95/p99 latency, 5xx, DB pool/locks, RabbitMQ queue lag, signed URL failures and mobile error telemetry.
+6. Watch affected service p95/p99, 5xx, per-service database health, remote call timeouts, RabbitMQ queue lag/DLQ, signing and client E2E metrics.
 7. Gradually expose feature flags; verify business-level safety and analytics.
 8. Complete release record: SHA/digest, migration ID, known issues, health evidence.
 
 ## 4. Rollback and forward repair
 
-Application rollback reuses prior image digest; it must be compatible with schema already migrated. **Do not automatically roll back destructive DB schema migrations.** If data is corrupted, initiate incident handling and restore/run forward repair under approved runbook.
+Rollback **one service at a time** using its prior tested digest; older peer API/event versions must remain compatible with deployed consumers and each service's migrated schema. **Do not automatically roll back destructive DB schema migrations.** If data is corrupted, initiate incident handling and restore/run forward repair under approved runbook.
 
 Trigger rollback for sustained SLO breach, security exposure, P0 user journey failure or data-integrity risk. Suspension of unsafe content or commercial features may be immediate via approved flags/admin controls.
 
 ## 5. Background workers and events
 
-Before deploying consumer contract changes, verify producers/consumers can coexist. Consumers must handle duplicate delivery. Queue drains/replays are supervised; never purge production queues to make dashboards green. Failed events remain in DLQ with owner and replay instructions.
+Before independently deploying a producer or consumer contract change, verify old/new versions of **separately deployed services** can coexist. Consumers must handle duplicate delivery. Queue drains/replays are supervised; never purge production queues to make dashboards green. Failed events remain in DLQ with owner and replay instructions.
 
 ## 6. Store release compatibility
 
@@ -53,7 +53,7 @@ Use minimum review path defined in Git workflow; keep secrets and quality gates 
 [ ] Login and protected Parent Zone functional  
 [ ] Published stories authorize, stream and resume  
 [ ] Downloads and entitlement checks safe  
-[ ] Workers processing, DLQ and outbox observed  
+[ ] Per-service image, Flyway version, DB ownership and worker outbox/DLQ health verified  
 [ ] CDN/media signing TTL correct  
 [ ] Backups current and logs retained  
 [ ] Rollback/feature-disable path verified  
