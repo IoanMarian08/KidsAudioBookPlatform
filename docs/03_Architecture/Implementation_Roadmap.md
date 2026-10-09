@@ -14,7 +14,7 @@ The roadmap is dependency-driven rather than calendar-driven. A phase may begin 
 ## 2. Delivery Principles
 
 1. Build vertical slices that produce testable user or operator value.
-2. Keep the first production backend a modular monolith with explicit bounded contexts.
+2. Build independently deployable Java 21/Spring Boot microservices from the start, with clear bounded-context and database ownership per [ADR-0015](../00_Project/ADR/ADR-0015-microservices-from-first-release.md).
 3. Treat security, observability, migrations, auditability, and automated testing as feature work.
 4. Define OpenAPI and event contracts before dependent clients are implemented.
 5. Prefer reversible decisions and incremental delivery over large coordinated releases.
@@ -74,17 +74,17 @@ Create a reproducible development and delivery baseline before domain implementa
 
 ### Deliverables
 
-- Java 21 and Spring Boot backend parent project;
+- Java 21 and Spring Boot **separate service projects** (identity, profiles, catalog, media, playback, billing, notifications and admin), with common build/deployment templates;
 - Flutter mobile application shell;
 - React and TypeScript admin dashboard shell;
 - Maven, Flutter and Node.js build conventions;
-- Docker Compose for PostgreSQL, Redis, RabbitMQ and MinIO;
-- Flyway baseline and migration conventions;
+- Docker Compose launching the independently deployed microservices, gateway and shared dependencies; one PostgreSQL instance may host **isolated logical databases per service**;
+- separate Flyway baseline and migration history, DB user and privileges for each service;
 - structured logging and correlation ID propagation;
 - health, readiness and liveness endpoints;
 - CI workflows for build, test, static analysis, dependency and secret scanning;
 - environment configuration and secret-handling conventions;
-- architecture tests for module dependency rules;
+- architecture tests ensuring no cross-service domain/JPA imports or direct database connections;
 - local-development setup guide.
 
 ### Required validation
@@ -93,7 +93,7 @@ Create a reproducible development and delivery baseline before domain implementa
 - CI passes for backend, mobile and admin;
 - local infrastructure can be reset and recreated;
 - no secrets or local credentials are committed;
-- one sample API request, event and database migration are exercised end to end.
+- one **cross-service REST flow**, one RabbitMQ event/outbox/inbox exchange, and **two separately migrated service databases** are exercised end to end.
 
 ### Exit gate
 
@@ -403,9 +403,9 @@ Potential increments include:
 - casting and smart-speaker support;
 - enhanced content-production automation;
 - experimentation infrastructure;
-- selective service extraction for independently scaling workloads.
+- independent per-service autoscaling, rolling releases and contract compatibility as workload grows.
 
-Service extraction must follow measurable operational evidence and the process defined in `Software_Architecture.md`.
+Changing/splitting/merging any existing service boundary requires an ADR and a data/contract migration plan. There is no monolith extraction phase.
 
 ## 19. Dependency Map
 
