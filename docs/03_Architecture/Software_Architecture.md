@@ -29,6 +29,8 @@ The product supports narrated stories, synchronized text, multiple illustrations
 
 The architecture must support future localization, author workflows, larger content catalogs, advanced recommendations, and service extraction without forcing premature distributed-system complexity into the MVP.
 
+**Status and scope:** This document describes the intended architecture, not deployed production software. The three-day trial, ad policy, profile quotas and final rollout depend on explicit Product/Legal approval, as captured in the [Decision Register](../00_Project/DECISION_REGISTER.md). The [Product Bible](../00_Project/Product_Bible.md) defines intended MVP capabilities; staging priorities in the PRD do not silently replace that scope. [ADR-0001](../00_Project/ADR/ADR-0001-modular-monolith-first.md) supersedes the older legacy ADR-002 that proposed immediate microservices.
+
 ## 3. Architecture Principles
 
 The platform follows these principles:
