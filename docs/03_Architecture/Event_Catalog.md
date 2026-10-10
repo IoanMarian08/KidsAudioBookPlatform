@@ -727,7 +727,7 @@ During migration:
 4. deploy tolerant consumers first;
 5. enable the producer version;
 6. observe adoption and failures;
-7. retire the old version only after supported consumers no longer require it.
+7. retire a schema revision only when all supported consumers no longer require it.
 
 Event names are never reused for a different fact.
 

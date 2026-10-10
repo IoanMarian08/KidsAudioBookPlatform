@@ -326,7 +326,7 @@ Removal occurs only after:
 1. supported clients have a migration path;
 2. usage falls below the approved threshold;
 3. the support window ends;
-4. contract tests for the old version are intentionally removed;
+4. contract tests for an unsupported contract revision are intentionally removed;
 5. documentation and operational dashboards are updated.
 
 ## Compatibility Matrix
