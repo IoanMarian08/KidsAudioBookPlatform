@@ -193,7 +193,7 @@ Examples:
 - `Parent Zone`, not alternating with unrelated names;
 - `child profile`, not `child account` unless a distinct authenticated account is introduced;
 - `story`, `series` and `episode` according to the domain model;
-- `modular monolith` for the initial backend deployment model;
+- `microservices-first` for the initial backend deployment model (independent Spring Boot services; ADR-0015);
 - `bounded context` or `module` according to the architectural meaning.
 
 New important terms should be added to the project glossary or defined locally.

@@ -132,7 +132,7 @@ When adjacent issues are discovered, they should be reported or tracked separate
 
 AI-generated changes must preserve:
 
-- modular-monolith boundaries;
+- microservices-first service boundaries, owned logical databases, versioned REST/RabbitMQ contracts and independent deployments (ADR-0015);
 - domain ownership;
 - dependency direction;
 - server-side authority for security and entitlement decisions;

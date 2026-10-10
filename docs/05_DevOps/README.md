@@ -5,7 +5,7 @@ Status: Documentation navigation
 
 ## Start here
 
-Production-oriented operational blueprints for an intended modular monolith, workers, PostgreSQL, Redis, RabbitMQ and private media/CDN. Example configurations are **not deployed infrastructure** and must be adapted and tested.
+Production-oriented operational blueprints for **independently deployed Spring Boot microservices from the first release**, their service-owned workers and logical PostgreSQL databases, Redis, RabbitMQ and private media/CDN. Example configurations are **not deployed infrastructure** and must be adapted and tested.
 
 **Recommended first document:** [Infrastructure.md](Infrastructure.md).
 
