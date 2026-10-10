@@ -9,7 +9,7 @@
 | Your goal | Read first |
 |---|---|
 | Understand product and audience | [Product Bible](docs/00_Project/Product_Bible.md) |
-| Understand MVP behavior | [Product Requirements](docs/01_Product/Product_Requirements_Document.md) and [User Flows](docs/01_Product/User_Flows.md) |
+| Understand the complete app behavior | [Product Bible](docs/00_Project/Product_Bible.md), [Complete Functional Specification](docs/01_Product/Functional_Specification/README.md) and [PRD](docs/01_Product/Product_Requirements_Document.md) |
 | Understand system shape | [Software Architecture](docs/03_Architecture/Software_Architecture.md) and [C4 views](docs/03_Architecture/C4_Model/README.md) |
 | Implement backend APIs | [Backend Architecture](docs/03_Architecture/Backend_Architecture.md), [API Specification](docs/03_Architecture/API_Specification.md), [Coding Standards](docs/04_Engineering/Coding_Standards.md) |
 | Implement Flutter | [Mobile Architecture](docs/03_Architecture/Mobile_Architecture.md) and [UX Design System](docs/02_UX_UI/UI_Design_System.md) |
@@ -46,7 +46,7 @@ These are architecture decisions, **not evidence that this repository currently 
 ## Getting involved
 
 1. Read the [Product Bible](docs/00_Project/Product_Bible.md) and the [Decision Register](docs/00_Project/DECISION_REGISTER.md).
-2. Choose a requirement ID in [Functional Requirements](docs/01_Product/Functional_Requirements.md).
+2. Choose a requirement ID in [Functional Requirements](docs/01_Product/Functional_Requirements.md), then inspect its exact behavior in [Complete Functional Specification](docs/01_Product/Functional_Specification/README.md).
 3. Identify the owning bounded context, API/event contracts, threat model and acceptance tests.
 4. Follow [Contribution Guidelines](CONTRIBUTING.md), [Definition of Ready](docs/04_Engineering/Definition_of_Ready.md), and [Definition of Done](docs/04_Engineering/Definition_of_Done.md).
 5. Link changed docs, ADRs and test evidence in the pull request.

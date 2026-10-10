@@ -99,3 +99,6 @@ The repository is the source of truth. Important decisions must not exist only i
 ## 10. Maintenance Responsibility
 
 Project Leadership owns the folder structure and document coverage. Individual documents remain owned by the teams listed in their headers. Pull-request reviewers must reject changes that introduce undocumented project-level decisions or leave source-of-truth documents inconsistent.
+## Detailed functional behavior
+
+The [Complete Functional Specification](../01_Product/Functional_Specification/README.md) expands the Product Bible into 15 linked chapters covering app screens, rules, transitions, failures, protected Parent Zone, subscriptions, child-safe content, administration and release acceptance. It remains a product specification; the backend architecture is independently deployed microservices per ADR-0015.
