@@ -81,9 +81,9 @@ The preferred evolution model is:
 1. define bounded contexts;
 2. implement strong module boundaries;
 3. deploy together where appropriate;
-4. extract independently deployable services only when there is a clear scaling, ownership, security, or release benefit.
+4. deploy separate microservices from the first release per ADR-0015; later service splits or merges require a clear scaling, ownership, security or release benefit.
 
-Service extraction must be justified through an ADR.
+Further service splits, merges or ownership transfers must be justified through an ADR; no monolith extraction phase is planned.
 
 ## 5. Bounded Contexts
 

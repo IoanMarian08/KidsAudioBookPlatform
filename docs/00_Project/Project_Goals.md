@@ -384,7 +384,7 @@ A feature is not considered part of the delivered MVP until it meets `Definition
 
 The initial backend uses **independently deployable Spring Boot microservices**, with isolated data ownership and REST/RabbitMQ integration, as approved in [ADR-0015](ADR/ADR-0015-microservices-from-first-release.md).
 
-The architecture must preserve future extraction through:
+The architecture must preserve independently deployed service boundaries and future service evolution through:
 
 - explicit module ownership;
 - stable contracts;
@@ -677,7 +677,7 @@ Scaling actions should be evidence-driven and may include:
 - queue partitioning;
 - CDN optimization;
 - read replicas;
-- service extraction.
+- independent scaling, service migration and compatibility management.
 
 ---
 
