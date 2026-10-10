@@ -164,29 +164,29 @@ Each debt entry must contain:
 
 ## 10. Current baseline debt register
 
-The entries below describe expected debt risks during the initial modular-monolith phase. Owners must replace assumptions with implementation evidence as the system matures.
+The entries below describe expected debt risks under the **microservices-first architecture** ([ADR-0015](../../00_Project/ADR/ADR-0015-microservices-from-first-release.md)). Owners must replace assumptions with implementation evidence as services are deployed.
 
-### TD-001 — Shared PostgreSQL instance across bounded contexts
+### TD-001 — Shared PostgreSQL cluster as infrastructure
 
 | Field | Value |
 |---|---|
 | Category | Architectural / Data |
 | Priority | P2 |
-| Status | Accepted |
-| Affected components | All backend bounded contexts |
-| Reason | A single database simplifies initial delivery and operations |
-| Current impact | Logical boundaries depend on schema and repository discipline rather than physical isolation |
-| Future risk | Cross-context joins and direct table access may prevent clean service extraction |
-| Owner | Backend Architecture |
-| Review trigger | First service extraction proposal or repeated cross-context coupling |
-| Proposed remediation | Enforce schema ownership, repository boundaries, integration APIs, and migration plans before extraction |
+| Status | Accepted with isolation controls |
+| Affected components | Every stateful backend microservice |
+| Reason | A shared physical cluster reduces infrastructure cost while every service owns its separate logical database |
+| Current impact | Availability/capacity of the PostgreSQL cluster remains shared; **business data ownership is not shared** |
+| Future risk | Cluster-wide outage, pool contention or accidental cross-service credentials if isolation is misconfigured |
+| Owner | Backend Architecture and DevOps |
+| Review trigger | Cluster resource contention, access-control failure, restore drill, growth in service count |
+| Proposed remediation | Separate logical databases/users/migrations, permission tests, per-service pool budgets, recovery plans and monitoring |
 
 Acceptance conditions:
 
-- each table has one owning bounded context;
-- no module reads another module's tables directly;
-- cross-context data is accessed through application contracts or read models;
-- Flyway migrations remain ownership-aware.
+- every service has one owning logical PostgreSQL database and dedicated least-privileged user;
+- no service can read or write another service's tables, including when hosted on the same physical cluster;
+- cross-service data moves through versioned REST/events and service-owned projections;
+- Flyway migrations, backup and restore procedures belong to the owning service.
 
 ### TD-002 — Microservices distributed-systems and contract overhead
 

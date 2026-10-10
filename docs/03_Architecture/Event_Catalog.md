@@ -30,7 +30,7 @@ They may be consumed by other modules, projections, workers, analytics, notifica
 
 ### 2.2 Integration events
 
-Integration events are stable externalized contracts derived from domain events. In the modular-monolith stage, a domain event and its integration representation may be produced by the same transaction, but external consumers depend only on the integration contract documented here.
+Integration events are stable externalized contracts derived from service-local domain events. Each producing microservice commits business state and its outbox row in its own logical PostgreSQL database. RabbitMQ distributes versioned events; consuming microservices deduplicate locally. No cross-service transaction is assumed.
 
 ### 2.3 Operational events
 

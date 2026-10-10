@@ -374,7 +374,7 @@ Changes to the container model require an ADR when they introduce:
 - a new external provider;
 - direct media proxying through the backend;
 - a new source of truth;
-- a microservice extraction;
+- a microservice boundary split, merge or migration;
 - a material change to data ownership.
 
 ## 20. Related documents

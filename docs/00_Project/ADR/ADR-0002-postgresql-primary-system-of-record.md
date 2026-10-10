@@ -42,12 +42,12 @@ Each bounded context owns its tables, schema objects, migrations, and write path
 
 Rules:
 
-1. A module may read another module's data only through an approved application interface, projection, or documented read model.
-2. Direct cross-module writes are forbidden.
-3. Foreign keys across module boundaries are allowed only when they preserve essential integrity and do not prevent future extraction.
+1. A microservice may read data owned by another service only through a versioned REST contract or an event-fed projection owned by the consumer.
+2. Direct cross-service SQL reads and writes are forbidden.
+3. Cross-service foreign keys, shared JPA entities and transactions are forbidden even when logical databases share one PostgreSQL cluster.
 4. Shared reference data must have one explicit owner.
 5. Reporting queries must not become hidden write-time dependencies.
-6. Service extraction must preserve the original authority until a controlled migration transfers ownership.
+6. A future service split/merge must preserve the authoritative writer until a controlled data migration completes.
 
 ## Identifier Strategy
 
@@ -322,4 +322,4 @@ Rejected because it lacks the transactional, relational, and query guarantees re
 - Define table-level retention and privacy ownership.
 - Document connection-pool budgets for each environment.
 - Introduce read replicas only when production evidence supports them.
-- Review this ADR before database-per-service extraction, sharding, or a second authoritative database is introduced.
+- Review this ADR before service data transfer, sharding, or a second authoritative database is introduced.

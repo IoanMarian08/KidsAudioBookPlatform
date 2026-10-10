@@ -192,7 +192,7 @@ The following tiers are conceptual and must be recalibrated using real measureme
 | T2 | private beta | redundant API instances, managed backups, basic alerting |
 | T3 | public launch | horizontal scaling, CDN, queue workers, tested recovery |
 | T4 | growth | autoscaling, read optimization, stronger isolation and capacity forecasting |
-| T5 | large scale | selective service extraction, regional strategy, advanced FinOps |
+| T5 | large scale | independent service and database scaling, regional strategy, advanced FinOps |
 
 Scaling to a new tier requires evidence, not calendar dates.
 

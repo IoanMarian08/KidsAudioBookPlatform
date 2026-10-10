@@ -450,7 +450,7 @@ The system boundary contains the following major capabilities:
 14. Analytics and product insights
 15. Platform operations and observability
 
-These capabilities are logical boundaries. They may initially be implemented within a modular monolith and extracted into independently deployable services only when justified by scale, ownership, release cadence, or reliability requirements.
+These capabilities are independently deployed microservices from the first release. Each service owns its logical database and contracts; future service splits and merges require an ADR and migration plan.
 
 ## 11. Critical user journeys
 

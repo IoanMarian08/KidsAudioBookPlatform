@@ -9,7 +9,7 @@ Last updated: 2026-07-15
 
 This document defines how the KidsAudioBookPlatform architecture diagrams are created, reviewed, versioned, validated, published, and kept synchronized with implementation.
 
-The diagrams are engineering assets. They are not decorative documentation and must remain accurate enough to support design reviews, onboarding, implementation planning, incident analysis, security review, and future service extraction.
+The diagrams are engineering assets. They are not decorative documentation and must remain accurate enough to support design reviews, onboarding, implementation planning, incident analysis, security review, and future service-boundary changes and independent deployment.
 
 This guide applies to:
 
@@ -122,7 +122,7 @@ A diagram review is mandatory when a change introduces or modifies:
 - a media upload or delivery path;
 - a scaling or high-availability mechanism;
 - a new environment, region, network zone, or ingress path;
-- a service extraction or consolidation;
+- a service split, merge or consolidation;
 - an ownership transfer;
 - a material failure, retry, or recovery strategy.
 
@@ -306,7 +306,7 @@ Target-state components must not appear as if they already exist.
 Use explicit labels such as:
 
 - `Current MVP`;
-- `Target after service extraction`;
+- `Target after a service-boundary migration`;
 - `Optional future capability`;
 - `Transitional adapter`.
 
@@ -488,7 +488,7 @@ After an incident, diagrams must be reviewed when the incident reveals:
 
 The post-incident update should describe the corrected architecture, not the incident timeline. Incident chronology belongs in the incident report.
 
-## 20. Service Extraction Updates
+## 20. Service Boundary Migration Updates
 
 When a new microservice is created or an existing service boundary changes, update at minimum:
 
@@ -503,7 +503,7 @@ When a new microservice is created or an existing service boundary changes, upda
 - operations ownership and observability paths;
 - Architecture Roadmap and Known Technical Debt.
 
-The old in-process path must be removed from active diagrams only after the extracted service is the authoritative production path.
+The old remote contract/route must be removed from active diagrams only after the new owning service is authoritative in production and compatibility windows have ended.
 
 ## 21. Definition of Diagram Completion
 

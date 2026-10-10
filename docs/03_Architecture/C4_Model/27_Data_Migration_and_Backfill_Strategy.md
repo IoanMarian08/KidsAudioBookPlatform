@@ -7,7 +7,7 @@ Last reviewed: 2026-07-15
 
 ## 1. Purpose
 
-This document defines how KidsAudioBookPlatform changes persisted data safely across schema evolution, service extraction, provider replacement, historical corrections, and large backfills. The objective is to preserve correctness, availability, auditability, and rollback options without exposing users to inconsistent behavior.
+This document defines how KidsAudioBookPlatform changes persisted data safely across independently deployed services, service ownership transfers, schema evolution, provider replacement, historical corrections, and large backfills. The objective is to preserve correctness, availability, auditability, and rollback options without exposing users to inconsistent behavior.
 
 ## 2. Scope
 
@@ -18,7 +18,7 @@ The strategy applies to:
 - object-storage key or metadata migrations;
 - event and read-model rebuilds;
 - local mobile database migrations;
-- service extraction and data ownership transfer;
+- service split/merge and data ownership transfer between already deployed microservices;
 - historical entitlement, subscription, notification, and playback corrections;
 - bulk administrative imports.
 
@@ -145,7 +145,7 @@ A migration must define the last point at which simple rollback remains possible
 
 ## 11. Data Ownership Transfer
 
-Service extraction requires:
+A transfer of data ownership between independently deployed microservices requires:
 
 1. a declared source and future owner;
 2. a canonical data contract;

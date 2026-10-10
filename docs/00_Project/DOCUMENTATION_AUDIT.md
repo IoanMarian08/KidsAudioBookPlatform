@@ -5,6 +5,14 @@ Status: Audit findings and remediation tracking
 Source revision: main at c3d699723f1f76d0d7ad5348f648185cd86346a4  
 Scope: all 119 Markdown documents + repository file tree at baseline
 
+## Microservices consistency sweep — 2026-10-10
+
+After accepting ADR-0015 and merging the initial microservices architecture update, a full-tree **textual audit of 138 Markdown files** found additional active guidance that still assumed a modular monolith or future service extraction. The sweep updated accepted ADR-0002/0009/0011, legacy ADR-005, project goals, architecture principles, C4 context/contracts/diagram maintenance/technical debt/governance/migrations/risks, Event Catalog, Engineering documentation standards and DevOps navigation.
+
+**Normative architecture:** separate independently deployed Java 21/Spring Boot services, per-service logical PostgreSQL databases and credentials, REST/OpenAPI internal contracts, RabbitMQ versioned events/outbox/inbox, an HTTPS edge gateway and service-owned workers. Sharing a physical PostgreSQL *cluster* does not mean sharing an application database.
+
+**Important limits:** historical/superseded ADR rationale remains intentionally visible; string checks do not prove that every conceptual dependency, example, diagram or machine-readable contract has been implemented or tested. Product/legal launch decisions and concrete cloud/orchestrator/provider choices remain open. A new contributor must consult [ADR-0015](ADR/ADR-0015-microservices-from-first-release.md) rather than treating historical text as current implementation direction.
+
 ## Method
 
 The audit enumerated the repository's Git tree, reviewed the Markdown files for local relative-link targets and inspected architecture, product, ADR, DevOps and testing documents for actionable contradictions and usability issues. External URLs and Mermaid rendering were **not** independently validated; code examples have **not** been compiled against an implemented application.

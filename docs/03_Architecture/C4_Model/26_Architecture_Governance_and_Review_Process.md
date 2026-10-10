@@ -7,7 +7,7 @@ Last reviewed: 2026-07-15
 
 ## 1. Purpose
 
-This document defines how architectural decisions are proposed, reviewed, approved, implemented, verified, and revisited for KidsAudioBookPlatform. It ensures that architecture remains intentional as the platform evolves from a modular monolith toward independently deployable services.
+This document defines how architectural decisions are proposed, reviewed, approved, implemented, verified, and revisited for KidsAudioBookPlatform. It ensures that architecture remains intentional as **independently deployable microservices evolve from the first release**, under [ADR-0015](../../00_Project/ADR/ADR-0015-microservices-from-first-release.md).
 
 ## 2. Governance Principles
 
@@ -26,7 +26,7 @@ This document defines how architectural decisions are proposed, reviewed, approv
 | Local | Internal implementation with no contract or operational impact | Code review notes | Module maintainers |
 | Module | Domain model, persistence, internal API, module dependency | Design note or lightweight ADR | Module owner and one reviewer |
 | Platform | Shared infrastructure, security model, public API, event schema, data ownership | Full ADR | Architecture and affected owners |
-| Strategic | Deployment topology, major technology, service extraction, compliance posture | ADR plus review meeting | Architecture and engineering leadership |
+| Strategic | Deployment topology, major technology, service split/merge and data ownership transfer, compliance posture | ADR plus review meeting | Architecture and engineering leadership |
 
 ## 4. When an ADR Is Required
 
