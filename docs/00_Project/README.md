@@ -19,7 +19,7 @@ The documents in this folder are intentionally independent from implementation d
 | `Project_Charter.md` | Product mission, scope, stakeholders, constraints, outcomes, and success measures | Product and Architecture |
 | `Definition_of_Done.md` | Shared completion criteria for features, fixes, releases, and documentation | Engineering and QA |
 | `ADR/README.md` | Architecture Decision Record index, lifecycle, and governance | Architecture |
-| [ADR index](ADR/README.md), including ADR-0015 | **Current accepted microservices-first architecture**; former ADR-0001 monolith-first is superseded | Architecture and Backend |
+| [ADR index](ADR/README.md), including ADR-0015 | **Microservices from the first release**; independent runtime and data ownership | Architecture and Backend |
 
 ## 3. Documentation Hierarchy
 

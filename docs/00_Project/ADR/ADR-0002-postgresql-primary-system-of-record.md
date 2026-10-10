@@ -299,7 +299,7 @@ Rejected because most core data is relational and benefits from explicit constra
 
 ### Database per service from day one — now required
 
-The original monolith-era alternative is **superseded by ADR-0015**. Distinct logical databases and scoped users are mandatory for each independently deployed service; shared infrastructure is allowed. Operational overhead is an accepted product-owner trade-off.
+Distinct logical databases and scoped users are mandatory for each independently deployed service under [ADR-0015](ADR-0015-microservices-from-first-release.md). Shared PostgreSQL infrastructure is allowed, while cross-service database access is prohibited. The operational overhead of independently owned databases is included in the architecture cost model.
 
 ### Event store as the primary persistence model
 

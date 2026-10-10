@@ -9,7 +9,7 @@ Last reviewed: 2026-07-14
 
 This document defines the code-level structure of a backend feature module in KidsAudioBookPlatform. It complements the system context, container, and component diagrams by showing how code inside a bounded context must be organized and how responsibilities flow from the API boundary to the domain and infrastructure layers.
 
-The model defines **components inside each independently deployable microservice**, not modules bundled into a monolith. Each service has its own source/build, domain policy, database, migrations, REST/event contracts and release lifecycle (see [ADR-0015](../../00_Project/ADR/ADR-0015-microservices-from-first-release.md)).
+The model defines **components inside each independently deployable microservice**, with a separate service build, runtime, API boundary and data owner. Each service has its own source/build, domain policy, database, migrations, REST/event contracts and release lifecycle (see [ADR-0015](../../00_Project/ADR/ADR-0015-microservices-from-first-release.md)).
 
 ## 2. Scope
 
