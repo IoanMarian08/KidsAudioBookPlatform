@@ -13,7 +13,7 @@ Defines what children and parents need, which behaviors are in scope, and how ac
 
 | Document | What it answers |
 |---|---|
-| [Functional_Specification/README.md](Functional_Specification/README.md) | **15 detailed linked chapters:** every screen, user action, valid state, error, offline rule, admin workflow and acceptance test |
+| [Functional_Specification/README.md](Functional_Specification/README.md) | **18 detailed linked chapters:** every screen, user action, valid state, error, offline rule, admin workflow and acceptance test |
 | [Product_Requirements_Document.md](Product_Requirements_Document.md) | MVP scope, personas, acceptance and release gates |
 | [Functional_Requirements.md](Functional_Requirements.md) | Stable feature IDs, permissions and observable behaviors |
 | [Non_Functional_Requirements.md](Non_Functional_Requirements.md) | Reliability, performance, privacy, quality constraints |

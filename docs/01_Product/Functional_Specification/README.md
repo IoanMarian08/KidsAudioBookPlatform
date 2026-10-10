@@ -34,6 +34,9 @@ Product Bible controls overall product intent. The PRD defines scope and priorit
 | [13. Screen inventory](13_Screen_Inventory_and_UX_Handoff.md) | Every Flutter and admin screen, inputs, actions and expected states |
 | [14. State matrices](14_State_Matrices_and_Behavioral_Edge_Cases.md) | Transition guards, remote failures, privacy and retries |
 | [15. Editorial quality](15_Content_Quality_and_Editorial_Acceptance.md) | Audio, timing, image rights and safe content release |
+| [16. Forms and error UX](16_Forms_Validation_and_Error_UX.md) | Field validation, failure messages, confirmation and retry semantics |
+| [17. Age/accessibility/localization](17_Age_Bands_Accessibility_and_Localization.md) | Age-appropriate interaction, screen reader, motion and locale rules |
+| [18. Privacy-safe analytics and rollout](18_Privacy_Safe_Analytics_and_Feature_Governance.md) | Minimized metrics, gated features, consent and controlled release |
 
 ## Universal business invariants
 

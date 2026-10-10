@@ -103,7 +103,7 @@ Related: [Functional Requirements](Functional_Requirements.md), [Non-Functional 
 
 ## 10. Detailed Functional Specification — implementation baseline
 
-The [Complete Functional Specification](Functional_Specification/README.md) is the step-by-step companion for all product features. Its 15 linked chapters contain the precise screen inventory, visible interactions, ownership rules, state transitions, failure cases, accessibility and QA acceptance scenarios. The Product Bible remains the canonical source of product identity; detailed field formats and HTTP status/error contracts remain authoritative in [API Specification](../03_Architecture/API_Specification.md).
+The [Complete Functional Specification](Functional_Specification/README.md) is the step-by-step companion for all product features. Its 18 linked chapters contain the precise screen inventory, visible interactions, ownership rules, state transitions, failure cases, accessibility and QA acceptance scenarios. The Product Bible remains the canonical source of product identity; detailed field formats and HTTP status/error contracts remain authoritative in [API Specification](../03_Architecture/API_Specification.md).
 
 | PRD capability | Required functional specification |
 |---|---|
@@ -125,7 +125,7 @@ The [Complete Functional Specification](Functional_Specification/README.md) is t
 
 ## 11. Screen and state acceptance requirements
 
-No feature is ready for implementation until its relevant screens have named actors, visible inputs, actions, save/confirm states, permissions, empty/loading/offline/error states, and accessibility/locale expectations. Use [Screen Inventory](Functional_Specification/13_Screen_Inventory_and_UX_Handoff.md) for approved handoff IDs and [State Matrices](Functional_Specification/14_State_Matrices_and_Behavioral_Edge_Cases.md) for cross-feature transitions.
+No feature is ready for implementation until its relevant screens have named actors, visible inputs, actions, save/confirm states, permissions, empty/loading/offline/error states, and accessibility/locale expectations. Use [Screen Inventory](Functional_Specification/13_Screen_Inventory_and_UX_Handoff.md) for screen IDs, [State Matrices](Functional_Specification/14_State_Matrices_and_Behavioral_Edge_Cases.md) for transitions, [Forms/Error UX](Functional_Specification/16_Forms_Validation_and_Error_UX.md) for validation messages, [Inclusive Experience](Functional_Specification/17_Age_Bands_Accessibility_and_Localization.md) for age/accessibility/locales and [Measurement Governance](Functional_Specification/18_Privacy_Safe_Analytics_and_Feature_Governance.md) for privacy-safe telemetry and flags.
 
 The most important product risks requiring end-to-end tests are: profile/sibling data isolation; unauthorized Parent Zone access; unpublished/suspended content; unverified Premium grants; offline stale-progress conflict; repeated purchase webhook; account deletion under partial service failure; and parent-notification consent.
 

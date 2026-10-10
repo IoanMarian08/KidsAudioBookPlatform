@@ -553,12 +553,12 @@ Exact prices, regional availability, trial eligibility, grace periods, and store
 
 ## 18. Advertising
 
-Advertising is allowed only for eligible free users.
+**Advertising is a proposed, feature-gated capability and is disabled until explicit Product, Legal, Security and app-store approval (DEC-004).** If activated under an approved market policy, only eligible Free users may receive approved placements.
 
 Core rules:
 
 - never interrupt a story in the middle;
-- target a maximum of one advertisement after every two completed listening sessions under the initial policy;
+- the proposed maximum is one advertisement after every two qualified completed listening sessions, subject to legal/product approval;
 - recommended ad duration is approximately 15 seconds;
 - suppress immediately after Premium activation;
 - avoid manipulative countdowns or fake controls;
@@ -916,9 +916,9 @@ A feature that fails safety, privacy, or parent-control checks must not ship.
 
 ---
 
-## 32. Canonical Decisions
+## 32. Canonical Product Direction
 
-The following decisions are currently canonical:
+The following are current **product design intentions**. Child safety/account ownership rules are mandatory; commercial numbers and feature activation remain subject to the approvals listed in Section 38 and the Decision Register:
 
 - target child audience: ages 0-7;
 - authenticated principal: parent account;
@@ -928,8 +928,8 @@ The following decisions are currently canonical:
 - mascot: rabbit;
 - free catalog target: approximately 50 stories;
 - Premium options: monthly and annual;
-- trial: three days;
-- free advertising policy: approximately one ad after every two completed listening sessions;
+- intended three-day trial, only with approved offer eligibility and provider rules (DEC-003);
+- proposed, **disabled-by-default** advertising: at most approximately one approved ad after every two qualified listening sessions, only if DEC-004 is approved;
 - advertisements never interrupt stories;
 - offline downloads: Premium;
 - multiple profiles: Premium;
@@ -994,6 +994,9 @@ Product Bible establishes the product's identity, emotional promise, high-level 
 | Screen-by-screen design handoff | [13 Screen Inventory](../01_Product/Functional_Specification/13_Screen_Inventory_and_UX_Handoff.md) |
 | Critical state transitions and negative paths | [14 State Matrices](../01_Product/Functional_Specification/14_State_Matrices_and_Behavioral_Edge_Cases.md) |
 | Story rights, quality and safety standards | [15 Editorial Acceptance](../01_Product/Functional_Specification/15_Content_Quality_and_Editorial_Acceptance.md) |
+| Input validation, retries, confirmations and error copy | [16 Forms and Error UX](../01_Product/Functional_Specification/16_Forms_Validation_and_Error_UX.md) |
+| Age suitability, accessibility and localization | [17 Inclusive Experience](../01_Product/Functional_Specification/17_Age_Bands_Accessibility_and_Localization.md) |
+| Privacy-safe analytics, flags and release rollout | [18 Measurement and Feature Governance](../01_Product/Functional_Specification/18_Privacy_Safe_Analytics_and_Feature_Governance.md) |
 
 Every feature must have a traceable relationship among Product Bible concept, a PRD/FR ID, functional FS rules, acceptance scenarios, current API contracts and responsible independent microservice. The Product Bible should not duplicate every field or HTTP payload from the other documents.
 

@@ -7,7 +7,7 @@ Note: This is a documentation change log, not an application release announcemen
 ## 2026-10-10 — Complete product functional specification
 
 - Expanded [Product Bible](00_Project/Product_Bible.md) with end-to-end product promises, functional cross-references, common recovery behavior and launch policy gates.
-- Added [Complete Functional Specification](01_Product/Functional_Specification/README.md) with 15 linked chapters for adult onboarding, child profiles, catalog/search, synchronized player, progress/offline, Parent Zone, verified billing, gated ads, notifications/privacy, admin/editorial and QA acceptance.
+- Added [Complete Functional Specification](01_Product/Functional_Specification/README.md) with 18 linked chapters for adult onboarding, child profiles, catalog/search, synchronized player, progress/offline, Parent Zone, verified billing, gated ads, notifications/privacy, admin/editorial and QA acceptance.
 - Added a [Screen Inventory](01_Product/Functional_Specification/13_Screen_Inventory_and_UX_Handoff.md), [State Matrices](01_Product/Functional_Specification/14_State_Matrices_and_Behavioral_Edge_Cases.md) and [Content Quality](01_Product/Functional_Specification/15_Content_Quality_and_Editorial_Acceptance.md).
 - Extended PRD, Functional Requirements, User Stories and User Flows with FS-ID traceability and additional negative and interrupted journeys.
 - Registered open decisions for offline licensing, playback completion, parent timers, notifications, export/support and editorial approval; did not assert legal or pricing approval.

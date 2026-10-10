@@ -116,6 +116,9 @@ The [Complete Functional Specification](Functional_Specification/README.md) is t
 | FS-PV-001..008 | Child data minimization, export design and deletion saga | FR-ID-004 plus privacy controls | owning services / identity coordination |
 | FS-AM-001..022 | Restricted staff editorial, media workflows and support audit | FR-CA-004/005, FR-AD-001..003 | admin/catalog/media/billing |
 | FS-CQ-001..010 | Rights, age review, audio quality and sync media acceptance | FR-CA-004/005/007 | content staff + catalog/media |
+| FS-FM-001..011 | Input validation, error UX, confirmation and uncertain outcomes | Cross-cutting all FRs | Flutter/React plus owning services |
+| FS-AG-001..005, FS-AC-001..010, FS-LO-001..006 | Age bands, accessibility, localization | FR-PR/CA/PL + NFR | Mobile, catalog and owning services |
+| FS-ME-001..012 | Privacy-safe metrics, analytics and controlled flags | Cross-cutting + GATED monetization | App + all owning services |
 
 ## 12. Mandatory negative requirements
 

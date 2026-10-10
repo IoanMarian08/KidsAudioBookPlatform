@@ -252,6 +252,30 @@ As an editor I want voice, text, illustrations and metadata to remain coherent a
 - Given a published audio rendition is replaced, then synchronized text/illustrations must be reverified.
 - Related: FS-CQ-004..010; FR-CA-007; DEC-007.
 
+### US-029 (P0): Validation and ambiguous request handling
+As a parent I want form errors and confirmations to be accurate so I never believe an unconfirmed change succeeded.
+
+- Given a form with invalid fields, when submit is attempted, then useful accessible validation is shown.
+- Given a backend write completes but network reply is lost, when Retry is selected, then operation remains logically once-only.
+- Given a destructive confirmation, when Back/Cancel is selected, then nothing is deleted.
+- Related: FS-FM-001..011; [Forms and Error UX](Functional_Specification/16_Forms_Validation_and_Error_UX.md).
+
+### US-030 (P0): Safe localized accessible experience
+As a child and parent I want the stories and controls to be understandable regardless of reading ability or device accessibility settings.
+
+- Given a changed age band, when opening a direct content link, then suitability restrictions still apply.
+- Given reduced motion or a screen reader, when navigating Child Room and Player, then primary tasks remain operable.
+- Given missing narration in the selected language, then no mismatched stream is advertised as a localized story.
+- Related: FS-AG-001..005, FS-AC-001..010, FS-LO-001..006; DEC-007/008.
+
+### US-031 (P1): Privacy-safe product measurement and rollout
+As a parent I want the app to improve without secretly profiling my child or enabling unwanted marketing.
+
+- Given optional analytics consent is absent where required, then nonessential telemetry is not sent.
+- Given an analytics provider outage, then approved playback still functions.
+- Given advertising not approved, then a client or remote flag cannot activate child ads.
+- Related: FS-ME-001..012; DEC-004/007/008.
+
 ## 9. Story completeness template
 
 Every story delivered to development includes:
