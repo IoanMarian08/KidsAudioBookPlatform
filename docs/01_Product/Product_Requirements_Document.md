@@ -99,3 +99,56 @@ Product analytics are aggregate and privacy-minimized. Measure parent onboarding
 Each story references a PRD ID and links to acceptance tests, API contracts, database changes, feature flags and rollout evidence. Breaking changes require Product approval plus ADR where architectural. Mark unresolved assumptions explicitly rather than implementing guesses.
 
 Related: [Functional Requirements](Functional_Requirements.md), [Non-Functional Requirements](Non_Functional_Requirements.md), [User Flows](User_Flows.md), [User Stories](User_Stories.md), [Roadmap](Roadmap.md).
+
+
+## 10. Detailed Functional Specification — implementation baseline
+
+The [Complete Functional Specification](Functional_Specification/README.md) is the step-by-step companion for all product features. Its 18 linked chapters contain the precise screen inventory, visible interactions, ownership rules, state transitions, failure cases, accessibility and QA acceptance scenarios. The Product Bible remains the canonical source of product identity; detailed field formats and HTTP status/error contracts remain authoritative in [API Specification](../03_Architecture/API_Specification.md).
+
+| PRD capability | Required functional specification |
+|---|---|
+| PRD-01 Account | [02 Identity](Functional_Specification/02_Onboarding_Identity_and_Accounts.md), [10 Privacy](Functional_Specification/10_Notifications_Support_and_Privacy.md) |
+| PRD-02 Child profiles | [03 Profiles](Functional_Specification/03_Profiles_Child_Room_and_Personalization.md) |
+| PRD-03 Discovery | [04 Catalog](Functional_Specification/04_Catalog_Search_and_Discovery.md) |
+| PRD-04 Player | [05 Player](Functional_Specification/05_Story_Player_Text_and_Ambience.md) |
+| PRD-05 Progress | [06 Offline/Progress](Functional_Specification/06_Favorites_History_Downloads_and_Sync.md) |
+| PRD-06 Parent Zone | [07 Parent Zone](Functional_Specification/07_Parent_Zone_and_Controls.md) |
+| PRD-07 Billing | [08 Subscriptions](Functional_Specification/08_Subscriptions_Trials_and_Entitlements.md) |
+| PRD-08 Editorial | [11 Admin](Functional_Specification/11_Admin_Editorial_and_Content_Operations.md), [15 Editorial Quality](Functional_Specification/15_Content_Quality_and_Editorial_Acceptance.md) |
+| PRD-09 Offline | [06 Offline/Progress](Functional_Specification/06_Favorites_History_Downloads_and_Sync.md) |
+| PRD-10 Synchronized media | [05 Player](Functional_Specification/05_Story_Player_Text_and_Ambience.md), [15 Quality](Functional_Specification/15_Content_Quality_and_Editorial_Acceptance.md) |
+| PRD-11 Bedtime / ambience | [05 Player](Functional_Specification/05_Story_Player_Text_and_Ambience.md) |
+| PRD-12 Notifications | [10 Notifications/Privacy](Functional_Specification/10_Notifications_Support_and_Privacy.md) |
+| PRD-13 Advertising | [09 Gated Ads](Functional_Specification/09_Advertising_and_Monetization_Safeguards.md) |
+| PRD-14 Localization/accessibility | [01 Global Behavior](Functional_Specification/01_Global_Behavior_and_Navigation.md), [13 Screen Inventory](Functional_Specification/13_Screen_Inventory_and_UX_Handoff.md) |
+| PRD-15 Recommendations | [04 Catalog](Functional_Specification/04_Catalog_Search_and_Discovery.md) |
+
+## 11. Screen and state acceptance requirements
+
+No feature is ready for implementation until its relevant screens have named actors, visible inputs, actions, save/confirm states, permissions, empty/loading/offline/error states, and accessibility/locale expectations. Use [Screen Inventory](Functional_Specification/13_Screen_Inventory_and_UX_Handoff.md) for screen IDs, [State Matrices](Functional_Specification/14_State_Matrices_and_Behavioral_Edge_Cases.md) for transitions, [Forms/Error UX](Functional_Specification/16_Forms_Validation_and_Error_UX.md) for validation messages, [Inclusive Experience](Functional_Specification/17_Age_Bands_Accessibility_and_Localization.md) for age/accessibility/locales and [Measurement Governance](Functional_Specification/18_Privacy_Safe_Analytics_and_Feature_Governance.md) for privacy-safe telemetry and flags.
+
+The most important product risks requiring end-to-end tests are: profile/sibling data isolation; unauthorized Parent Zone access; unpublished/suspended content; unverified Premium grants; offline stale-progress conflict; repeated purchase webhook; account deletion under partial service failure; and parent-notification consent.
+
+## 12. Release scoping and conditional functionality
+
+A P1 row is planned after initial P0 foundation work but is **not automatically out of launch scope**. Product Bible's intended MVP includes synchronized text/illustrations, bedtime/ambient features, offline downloads, notifications, and an intended three-day trial; Product must explicitly approve any release phasing at DEC-006. Child-directed advertising is additionally GATED by DEC-004 and remains disabled unless legally/platform approved.
+
+Commercial/legal values must not be invented: actual store prices, trial eligibility, free-profile quotas, launch language list, offline license TTL, data deletion period, age-data retention and notification quiet-hour defaults require the corresponding [Decision Register](../00_Project/DECISION_REGISTER.md) sign-off.
+
+## 13. Service-oriented implementation expectations
+
+The approved backend uses **independently deployed microservices from the first release**, not a shared application. Identity, profiles, catalog, media, playback, billing, notifications, admin and optional gated advertising each own their data. Every PRD change must identify the service owner and use versioned REST/OpenAPI or RabbitMQ events for cross-service integration. See [ADR-0015](../00_Project/ADR/ADR-0015-microservices-from-first-release.md) and [Microservices Contracts](../03_Architecture/Microservices_Contracts_and_Flows.md).
+
+## 14. Product review gate
+
+Review each PRD ID for:
+- approved user outcome and acceptable failure behavior;
+- role/permission and child age-band policy;
+- design screens, accessibility and localization;
+- security/privacy impact and market/store obligations;
+- exact contract and owning microservice;
+- positive, negative and offline acceptance cases;
+- product/legal OPEN/GATED decisions;
+- traceable tests and release evidence.
+
+A document is specification-complete when these fields are answered or explicitly blocked, but a feature is **not shipped** until its executable tests and operational release gates pass.

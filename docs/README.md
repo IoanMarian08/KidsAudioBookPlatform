@@ -11,7 +11,7 @@ KidsAudioBookPlatform is a parent-controlled audio-story platform for children i
 
 **Recommended reading order for a new contributor:**
 1. [Product Bible](00_Project/Product_Bible.md) and [Project Charter](00_Project/Project_Charter.md).
-2. [Product Requirements](01_Product/Product_Requirements_Document.md), [Functional Requirements](01_Product/Functional_Requirements.md), [Nonfunctional Requirements](01_Product/Non_Functional_Requirements.md).
+2. [Complete Functional Specification](01_Product/Functional_Specification/README.md) for every app screen, action, business rule, error state and acceptance test; then [PRD](01_Product/Product_Requirements_Document.md), [Functional Requirements](01_Product/Functional_Requirements.md) and [NFRs](01_Product/Non_Functional_Requirements.md).
 3. [Microservices Architecture](03_Architecture/Microservices_Architecture.md), [Software Architecture](03_Architecture/Software_Architecture.md), [Backend Architecture](03_Architecture/Backend_Architecture.md), [API Specification](03_Architecture/API_Specification.md).
 4. [Coding Standards](04_Engineering/Coding_Standards.md), [Git Workflow](04_Engineering/Git_Workflow.md), [Definition of Done](04_Engineering/Definition_of_Done.md).
 5. [Implementation Blueprints](07_Blueprints/README.md) for module-specific contracts and validation.
@@ -24,7 +24,7 @@ For **proposed launch policies** and decisions awaiting approval, consult the [D
 | Area | Contents | Audience |
 |---|---|---|
 | [00_Project](00_Project/) | Charter, goals, vision, glossary, Product Bible, ADRs | Everyone |
-| [01_Product](01_Product/) | PRD, requirements, stories, journeys, roadmap | Product/QA/engineering |
+| [01_Product](01_Product/) | [Complete Functional Specification](01_Product/Functional_Specification/README.md), PRD, requirements, stories, journeys and roadmap | Product/QA/engineering |
 | [02_UX_UI](02_UX_UI/) | Design system, colors, typography, animation, illustration, mascot, UX | Design/mobile/content |
 | [03_Architecture](03_Architecture/) | Software/backend/mobile/admin, API, data, security, events, flows, C4 | Architects/engineering |
 | [04_Engineering](04_Engineering/) | Code/documentation standards, branching, review, DoR/DoD, AI usage | Developers/reviewers |
@@ -70,10 +70,14 @@ Parent Zone is protected separately from Child World. The backend is authoritati
 
 The current accepted design uses **independently deployable Spring Boot/Java 21 microservices** from the first release, with per-service logical PostgreSQL databases, Flutter, Redis, RabbitMQ, object storage/CDN and service-owned workers. See [ADR-0015](00_Project/ADR/ADR-0015-microservices-from-first-release.md) and [Microservices Architecture](03_Architecture/Microservices_Architecture.md). Deployment specifics, final brand token values, billing offer/trial eligibility, country-specific legal requirements and operational RTO/RPO need explicit review and confirmation before launch. Proposed targets are not production certification.
 
-## 9. Finding the right depth
+## 9. Functional documentation path
+
+Read [Product Bible](00_Project/Product_Bible.md) for product vision, then the [Complete Functional Specification](01_Product/Functional_Specification/README.md) for implementation-grade user journeys and screens. Each functional chapter lists actors, interactions, edge cases and acceptance scenarios; [Screen Inventory](01_Product/Functional_Specification/13_Screen_Inventory_and_UX_Handoff.md) gives a Flutter/Admin handoff map. Use the [Decision Register](00_Project/DECISION_REGISTER.md) to identify values that require business/legal approval, not developer guesses.
+
+## 10. Finding the right depth
 
 Begin with product requirements and the primary software/API/data documents. Use C4 levels 1–4 to understand the system. The additional C4_Model files are specialized operational or governance references, not independent competing architectural decisions. Refer to the [ADR index](00_Project/ADR/README.md) for accepted choices and supersessions.
 
-## 10. Onboarding acceptance
+## 11. Onboarding acceptance
 
 New contributors should be able to trace a user story to architecture, an endpoint/event, a persistence model, a test and a deployment gate without relying on tribal knowledge. When they cannot, the owner should improve the relevant canonical document rather than start an unlinked page.

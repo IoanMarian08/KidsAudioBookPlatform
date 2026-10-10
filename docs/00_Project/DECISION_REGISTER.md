@@ -40,6 +40,14 @@ Several documents correctly describe the **intended product**, while some engine
 | DEC-010 | Final mascot name, font licenses and brand hex tokens | Currently proposed, not approved UI assets | Product + Design / **OPEN** |
 | DEC-011 | Root repository licensing and private vulnerability-reporting contact | Contributors require safe rules | Owner / **OPEN** |
 | DEC-012 | Supported mobile versions and backwards-compatibility window | Client rollouts are delayed in app stores | Mobile + Backend / **OPEN** |
+| DEC-013 | Offline grant TTL, device cap, revocation semantics, checksum/encryption and partial-download behavior | Offline paid rights and child safety | Product + Security + Billing + Mobile / **OPEN** |
+| DEC-014 | Qualified playback completion threshold, intentional replay, progress conflict rules and retention | Prevent false completion, progress rewinds and duplicate post-session counters | Product + Playback + QA / **OPEN** |
+| DEC-015 | Parental listening limits, bedtime timers, offline enforcement and Parent Zone proof windows | Parent safety controls cannot be ambiguous | Product + Security + Mobile / **OPEN** |
+| DEC-016 | Push/email templates, marketing consent, quiet-hour cadence, mandatory categories and launch notifications | Parent trust, privacy and provider policies | Product + Privacy + Notifications / **OPEN** |
+| DEC-017 | Data export API/format/status, support response channel and deletion/cancellation process | Rights fulfillment, audit and clear parent communication | Product + Privacy + Support / **OPEN** |
+| DEC-018 | Editorial roles, two-person approval where needed, content quality rubric, audio loudness targets and story rights review | Child-safe publication cannot depend on informal editor judgment | Product + Content + Security / **OPEN** |
+
+**Implementation rule:** The [Complete Functional Specification](../01_Product/Functional_Specification/README.md) identifies these decisions beside affected screens and user flows. Documented intent must not be mistaken for signed-off commercial/legal defaults.
 
 ## Required decision record
 

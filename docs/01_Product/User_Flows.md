@@ -111,3 +111,97 @@ Parent Zone elevation -> Explain data consequences -> Confirm -> Queue export/de
 | Download | Authorized offline playback | Space exhaustion, corrupt file, grant expiry |
 
 Linked: [PRD](Product_Requirements_Document.md), [UX Guidelines](../02_UX_UI/UX_Guidelines.md), [System Flows](../03_Architecture/System_Flows.md).
+
+
+## 11. Expanded cross-feature flows and failure branches
+
+### UF-11 — Device changes account while Child World is active
+
+1. Adult A's selected child has story progress and favorites shown.
+2. Adult logs out, or session becomes revoked from another device.
+3. App removes private profile context and clears elevated Parent Zone proof before showing sign in.
+4. Adult B signs in and chooses one of B's own profiles.
+5. UI loads only B's authorized home/progress/favorites; direct requests for A's profile/session IDs are rejected.
+6. If offline while A logs out, client enters a safe signed-out state; it does not send queued A mutations under B's credentials.
+
+**Alternative failures:** session-expiry during a pending save; account suspended; device reused by another household. Reference GL-AT-01, ID-AT-04, PR-AT-01.
+
+### UF-12 — Parent restricts story already cached by child
+
+1. Parent enters protected zone using a valid challenge.
+2. Parent selects the intended child and changes allowed age/category settings.
+3. profiles-service validates owner/proof and commits the change.
+4. Child World refreshes catalog/home and hides now-ineligible story.
+5. Child taps an old cached deep link or favorite.
+6. catalog/playback authorization revalidates current restrictions and refuses new media grant.
+7. Parent sees saved status and can reverse the change through the same protected path.
+
+**Alternative failures:** save timed out; another profile was accidentally selected; catalog projection stale; proof expires during save. Reference PZ-AT-01/03/04, CA-AT-02/06.
+
+### UF-13 — Parent purchases while provider is slow
+
+1. Parent enters Parent Zone and opens configured subscription plans.
+2. Approved storefront/localized price and terms are displayed.
+3. Parent confirms native store sheet; mobile receives pending/success transaction reference.
+4. billing-service verifies the transaction with Apple/Google and updates authoritative entitlements.
+5. Only verified active/grace/trial rights, where policy permits, allow Premium access.
+6. Parent receives correct outcome and can use Restore/Reconcile if delayed.
+
+**Alternative failures:** purchase canceled; unsupported product; provider outage; duplicate callback; refund; another account tries restore. Reference SU-AT-01..09.
+
+### UF-14 — Offline story sync after second device completion
+
+1. Authorized device A downloads eligible story and verifies checksum.
+2. Device A goes offline and listens to part of the story, writing local operations with unique IDs.
+3. Device B (same authorized profile) finishes the story online.
+4. Device A reconnects and sends queued operations to /sync/offline.
+5. Server deduplicates, resolves against current authoritative completion and returns per-change result.
+6. UI keeps Completed and only clears confirmed queued operations.
+
+**Alternative failures:** batch response lost; entitlement expired; account/profile deleted; item suspended; device A attempts update under new account. Reference OF-AT-02..08.
+
+### UF-15 — Editorial content urgent takedown
+
+1. Staff with correct permission selects published story and records a suspension reason.
+2. catalog-service commits current state and outbox event.
+3. Consumer projections/cache/search update asynchronously.
+4. Device still showing old cover attempts Play.
+5. playback/media authority checks current publication and denies a new grant.
+6. Staff audits status and uses reviewed operational procedure for previously issued URL exposure.
+
+**Alternative failures:** event delayed/duplicated; media-service unavailable; scheduled publish runs later; content revision conflicts. Reference AM-AT-04/05, CA-AT-06.
+
+### UF-16 — Parent requests deletion across microservices
+
+1. Parent verifies identity/Parent Zone proof and reads consequence explanation.
+2. Adult confirms deletion request; identity-service records durable workflow state.
+3. Owning services revoke sessions/devices, profiles, playback data, offline grants, notifications and retained data as authorized.
+4. Each owning service returns an idempotent outcome; financial/audit retention exceptions follow approved policy.
+5. Only after all required acknowledgements is Completed visible to parent.
+6. Offline devices reconnecting after deletion cannot use stale private data to regain access.
+
+**Alternative failures:** canceled within an approved window, one service down, late event, legal retention, store billing still active. Reference PV-AT-01..03; DEC-008/017.
+
+### UF-17 — Optional advertising remains gated
+
+1. The default feature flag is disabled for all child journeys.
+2. Story playback and completion proceed without ad SDK interaction.
+3. If product/legal/store later approve a launch policy, eligibility is evaluated server-side only after qualified completion.
+4. Verified Premium, missing consent, unsupported market and denied creative all result in no ad.
+5. Playback never depends on provider readiness.
+
+**Alternative failures:** duplicate completion; repeated ad token; provider failure. Reference AD-AT-01..07; DEC-004.
+
+## 12. Flow testing matrix
+
+| Flow | Happy path | Negative must test | Offline/partial failure |
+|---|---|---|---|
+| UF-11 Account switch | B owns new context | No A profile data | B cannot receive A offline queue |
+| UF-12 Parent restrictions | Authorized save | Blocked link denied | Stale cache cannot override |
+| UF-13 Purchase | Verified Premium | Forged/reused receipt denied | Provider timeout -> pending |
+| UF-14 Offline progress | Successful sync | Duplicate change dedup | Lost response retry safe |
+| UF-15 Takedown | Unpublish removes content | Unauthorized staff denied | Delayed events do not republish |
+| UF-16 Deletion | Verified all services complete | Child route denied | Stalled saga not Completed |
+| UF-17 Ads | Disabled by default | Child tracking disallowed | Provider outage does not block audio |
+
+The detailed functional outcomes and screen IDs are maintained in [Complete Functional Specification](Functional_Specification/README.md) and [Screen Inventory](Functional_Specification/13_Screen_Inventory_and_UX_Handoff.md), not redefined independently here.
