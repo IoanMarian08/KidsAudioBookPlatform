@@ -38,7 +38,7 @@ It complements the C4 structural views by answering:
 | Contract type | Primary technology | Typical use |
 |---|---|---|
 | Public synchronous API | HTTPS REST + JSON | Mobile and admin requests |
-| Internal synchronous contract | In-process application interface initially; REST after extraction when justified | Immediate cross-context query or command |
+| Internal synchronous contract | Authenticated REST/OpenAPI across independently deployed microservices; in-process calls only within one service | Immediate cross-service query or command |
 | Domain event | RabbitMQ | Meaningful internal business fact |
 | Integration event | RabbitMQ or provider webhook normalization | Fact shared with external or independently deployed consumers |
 | Provider webhook | HTTPS callback | Billing, delivery, or external processing status |

@@ -17,7 +17,7 @@ The matrix is intended to support:
 - security testing;
 - incident response;
 - audit preparation;
-- future service extraction.
+- per-service security and database isolation from the first deployment, and future service-boundary changes.
 
 A control is not considered implemented merely because it appears in this document. Implementation requires code, configuration, tests, telemetry, ownership, and operational validation.
 
