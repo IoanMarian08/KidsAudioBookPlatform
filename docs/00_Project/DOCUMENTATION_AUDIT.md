@@ -1,78 +1,54 @@
-# Documentation Audit — Baseline Findings
+# Documentation Quality Audit — Microservices Platform
 
-Version: 1.0  
-Status: Audit findings and remediation tracking  
-Source revision: main at c3d699723f1f76d0d7ad5348f648185cd86346a4  
-Scope: all 119 Markdown documents + repository file tree at baseline
+Version: 2.0
+Status: Active quality register
+Owner: Architecture and Engineering
+Reviewed: 2026-10-10
 
-## Microservices consistency sweep — 2026-10-10
+## Current architecture
 
-After accepting ADR-0015 and merging the initial microservices architecture update, a full-tree **textual audit of 138 Markdown files** found additional active guidance that still assumed a modular monolith or future service extraction. The sweep updated accepted ADR-0002/0009/0011, legacy ADR-005, project goals, architecture principles, C4 context/contracts/diagram maintenance/technical debt/governance/migrations/risks, Event Catalog, Engineering documentation standards and DevOps navigation.
+**KidsAudioBookPlatform is microservices-first.** From its initial implementation the backend consists of independently deployable Java 21/Spring Boot services: identity, profiles, catalog, media, playback, billing, notifications and admin. Advertising policy is separately feature-gated. Services own distinct logical PostgreSQL databases and credentials, independent Flyway migrations, REST/OpenAPI contracts and RabbitMQ outbox/inbox workflows.
 
-**Normative architecture:** separate independently deployed Java 21/Spring Boot services, per-service logical PostgreSQL databases and credentials, REST/OpenAPI internal contracts, RabbitMQ versioned events/outbox/inbox, an HTTPS edge gateway and service-owned workers. Sharing a physical PostgreSQL *cluster* does not mean sharing an application database.
+The authoritative source is [ADR-0015](ADR/ADR-0015-microservices-from-first-release.md), supported by [Microservices Architecture](../03_Architecture/Microservices_Architecture.md) and [Service Contracts and Flows](../03_Architecture/Microservices_Contracts_and_Flows.md).
 
-**Important limits:** historical/superseded ADR rationale remains intentionally visible; string checks do not prove that every conceptual dependency, example, diagram or machine-readable contract has been implemented or tested. Product/legal launch decisions and concrete cloud/orchestrator/provider choices remain open. A new contributor must consult [ADR-0015](ADR/ADR-0015-microservices-from-first-release.md) rather than treating historical text as current implementation direction.
+## Audit coverage
 
-## Method
+Documentation file tree, README navigation, ADR index, requirements and architecture, C4 levels and supplementary references, platform contracts, Engineering, DevOps, Testing and implementation blueprints have been reviewed for architecture consistency. A GitHub Actions workflow runs local Markdown path validation on pull requests.
 
-The audit enumerated the repository's Git tree, reviewed the Markdown files for local relative-link targets and inspected architecture, product, ADR, DevOps and testing documents for actionable contradictions and usability issues. External URLs and Mermaid rendering were **not** independently validated; code examples have **not** been compiled against an implemented application.
+**A file being present is not evidence that its code or infrastructure is running.** OpenAPI/event schema artifacts, concrete deployment files, Mermaid rendering, full external links, app-store providers and operational SLOs still require implementation or independent validation.
 
-**Do not equate a present Markdown document with an implemented feature.**
+## Quality gates
 
-## Confirmed findings
+| ID | Requirement | Status |
+|---|---|---|
+| DOC-001 | Root README provides clear onboarding and links to authoritative docs | Documented |
+| DOC-002 | ADR-0015 is the sole architecture-style baseline and ADR index lists current decisions | Documented |
+| DOC-003 | Each microservice has a named data and runtime owner | Documented |
+| DOC-004 | API ownership and synchronous REST/RabbitMQ integration paths are explicit | Documented; executable contracts pending |
+| DOC-005 | C4 container/component/deployment views show independent services and databases | Documented; diagram rendering review pending |
+| DOC-006 | Product Bible / PRD scope and launch decisions are traceable | Open decisions tracked |
+| DOC-007 | Service-level CI/testing, observability, recoverability and security standards defined | Documented; runtime verification pending |
+| DOC-008 | Repository-relative Markdown links checked in CI | Automated |
+| DOC-009 | Parent Zone, profile ownership, child-safety and paid access are enforced in domain contracts | Documented; integration/security tests pending |
+| DOC-010 | Each service has deployable source, per-service Flyway migrations, probes and release pipeline | **Not yet implemented** |
+| DOC-011 | Cloud/provider, region, RTO/RPO and service-to-service workload identity agreed | **Decision pending** |
 
-| ID | Severity | Finding | Remediation |
-|---|---|---|---|
-| AUD-001 | High | Root README contained only a title, obscuring the substantial documentation | Replace with audience-oriented entry point and onboarding sequence |
-| AUD-002 | High | Legacy ADR-002 accepted immediate Spring Boot microservices, conflicting with accepted ADR-0001 modular-monolith-first | Label legacy decision superseded and explain current authority |
-| AUD-003 | Medium | Four other legacy short ADRs overlap current four-digit ADRs or modern docs | Add legacy decision crosswalk without deleting decision history |
-| AUD-004 | High | Product Bible's expected MVP contains ads, trial, offline and synchronized media; staged PRD marks some P1/gated, without explicit scope reconciliation | Introduce signed-off decision register and clarify sequencing versus product promise |
-| AUD-005 | Medium | docs/README names a no-longer-existing branch while docs now reside on main | Make entry point branch-neutral and link current authority |
-| AUD-006 | Medium | Root CONTRIBUTING and SECURITY files consisted of headings only | Supply actionable contribution and private disclosure policies |
-| AUD-007 | Medium | Operational examples and quality standards exist, but application directories are currently scaffolds | Clearly label examples as blueprints and add implementable module plans/contracts before claiming readiness |
-| AUD-008 | Medium | Diagram collection contains many supplemental governance documents; the C4 index covers only a subset | Add task-based navigation to distinguish core diagrams from supplemental policies |
-| AUD-009 | Low | Repository includes empty historical document-de-proba scaffolding and skeletal LICENSE | Defer removal/license change to owner; document maturity honestly |
-| AUD-010 | Medium | Docs have no tested automated local-link quality gate in source tree | Add lightweight checker and PR CI workflow |
-| AUD-011 | High | Notifications.md listed PATCH /notifications/{id}/read and /dismiss plus GET unread-count, while canonical API Specification declares POST /read and DELETE /notifications/{id} | Reconcile Notifications API table to API Specification |
+## Remaining implementation work
 
-## Architecture decision revision — 2026-10-10
+1. Create actual service executables and individually deployable images in the repository.
+2. Add machine-readable public/internal OpenAPI definitions and JSON/event schema versions.
+3. Build gateway routes, service-to-service identity, deadlines, per-service databases/migrations, outbox/inbox and cross-service test suites.
+4. Choose cloud, orchestrator, region, hosting and production secrets management.
+5. Test per-service deployment/rollback, tracing, database privilege isolation and restore.
+6. Resolve product/legal/privacy launch choices in the [Decision Register](DECISION_REGISTER.md).
 
-**AUD-002 describes the initial audit baseline, not today's approved architecture.** The product owner subsequently required microservices from day one. [ADR-0015](ADR/ADR-0015-microservices-from-first-release.md) now supersedes the former ADR-0001 modular-monolith-first decision. The older ADR-002 stays a historical record, while ADR-0015 defines current service ownership, independent deployments and isolated logical databases. All implementation guides must use ADR-0015.
+## Contributor checklist
 
-## Link review caveats
+- [ ] Describe a feature using its requirement and user-story ID.
+- [ ] Name the owning microservice and logical database.
+- [ ] Specify peer REST/event contracts, authorization and failure behavior.
+- [ ] Include positive/negative tests, migrations, observability and recovery.
+- [ ] Update all affected C4, API, data, operational and product documentation.
+- [ ] Verify local Markdown links and cross-service compatibility.
 
-A path-based Markdown scan found no confirmed missing **file targets** in existing Markdown. Seven directory references in docs/README are valid folder navigation, not broken file paths. In-document anchor fragments and external links require a separate validation pass. The automated checker should understand directory/README targets and provide reproducible CI output.
-
-## Priority remediation plan
-
-### P0 — Documentation trust
-- [x] Improve root README, contribution policy and security reporting.
-- [x] Reconcile legacy ADR statuses (do not erase history).
-- [x] Register Product Bible/PRD release scope decisions.
-- [x] Add local-path link validation to CI; fragment/anchor strict mode remains optional pending review.
-
-### P1 — Implementation precision
-- [x] Prepare first bounded-context blueprints: Identity/Parent Zone, Catalog/Media, Playback/Progress/Offline, Subscriptions/Entitlements (draft, code verification still pending).
-- [ ] Add OpenAPI JSON/YAML examples that match API Specification, versioned event payloads and error semantics.
-- [ ] Add field-level privacy mapping and entitlement/download state tables.
-- [ ] Bind important FR/US requirements to architecture, test plans and owners.
-
-### P2 — Usability and governance
-- [x] Add clear architecture reference map and label supplemental C4 governance.
-- [ ] Capture environment setup commands **after** code modules are added.
-- [ ] Review repeated policy text to remove inconsistent copies, not to maximize page count.
-- [ ] Define review cadence and documentation owner for every active area.
-
-## Acceptance criteria for completed documentation
-
-- A new contributor knows what to build, where to start, and what is not yet implemented.
-- No pair of current accepted decisions conflicts without an explicit superseding link.
-- Important requirements trace to exact permissions, contracts, data owner, errors, tests and operations.
-- All relative links pass CI; external docs and Mermaid are reviewed manually until an automatic checker is introduced.
-- Unapproved child safety, billing and privacy assumptions are marked as gated and do not ship by accident.
-
-This audit records verified baseline findings and planned changes, not a claim that every diagram and contract is fully validated.
-
-## Remediation branch and verification
-
-Documentation improvements were committed on **docs/documentation-audit-2026-10**, branched from **main**. New folder READMEs, an executable local Markdown link checker and a CI workflow were added. This audit has not independently validated external links, all fragment IDs, Mermaid rendering, code examples or production behavior. Those remain explicit future verification tasks.
+Active quality is measured by correctness, traceability and implementation evidence rather than document count.

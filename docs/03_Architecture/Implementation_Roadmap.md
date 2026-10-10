@@ -405,7 +405,7 @@ Potential increments include:
 - experimentation infrastructure;
 - independent per-service autoscaling, rolling releases and contract compatibility as workload grows.
 
-Changing/splitting/merging any existing service boundary requires an ADR and a data/contract migration plan. There is no monolith extraction phase.
+Changing/splitting/merging any existing service boundary requires an ADR and a data/contract migration plan. Each service is independently deployed from the first release.
 
 ## 19. Dependency Map
 

@@ -281,7 +281,7 @@ Rules:
 
 ## 13. Microservices-first architecture — current decision
 
-**The project is microservices-first by explicit owner decision**, governed by [ADR-0015](../../00_Project/ADR/ADR-0015-microservices-from-first-release.md). Former monolith-first [ADR-0001](../../00_Project/ADR/ADR-0001-modular-monolith-first.md) is superseded. The first backend release must already have independently built, deployed and operated services with isolated logical databases.
+**The project is microservices-first**, governed by [ADR-0015](../../00_Project/ADR/ADR-0015-microservices-from-first-release.md). The first backend release consists of independently built, deployed and operated services with isolated logical PostgreSQL databases.
 
 ### 13.1 Service boundary decision checklist
 
@@ -296,7 +296,7 @@ Rules:
 - Rolling upgrades and backward compatibility work across concurrently deployed service versions.
 - Multi-service workflows use sagas/reconciliation; there is no cross-service transaction.
 
-Any future **split, merge or migration between existing services** requires an ADR, data migration strategy and compatibility/rollback plan. Do not reintroduce a monolith to simplify early development.
+Any future **split, merge or migration between existing services** requires an ADR, data migration strategy and compatibility/rollback plan. Keep the owning service boundaries and independent deployments intact during initial development.
 
 ## 14. Build versus buy
 

@@ -619,7 +619,7 @@ Metrics must be labeled by stable, low-cardinality values.
 
 All listed domains are microservices from the start. Before a service is called implementation-ready, verify its individually deployable image, endpoint/event contracts, unique logical PostgreSQL database and credential, per-service Flyway migrations, ownership controls, outbound deadline/retry policy, outbox/inbox idempotency, distributed tracing, tests, and operational alerts.
 
-Changing the service boundary requires an ADR and a migration/compatibility plan, not a future extraction milestone. See [Microservices Contracts](../Microservices_Contracts_and_Flows.md).
+Changing a service boundary requires an ADR, data ownership review and a migration/compatibility plan. See [Microservices Contracts](../Microservices_Contracts_and_Flows.md).
 
 
 ## 28. Architecture review checklist

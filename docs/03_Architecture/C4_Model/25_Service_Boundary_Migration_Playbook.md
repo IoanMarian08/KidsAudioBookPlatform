@@ -5,7 +5,7 @@ Status: Active; applies to changes between **already deployed microservices**
 Owners: Architecture, Backend, DevOps, Security
 Decision: [ADR-0015](../../00_Project/ADR/ADR-0015-microservices-from-first-release.md)
 
-> The filename retains the historical term "Extraction" so existing links remain valid. KidsAudioBookPlatform does **not** start with a monolith. This playbook governs future **service split, merge, domain ownership transfer and database migration**, not a transition from a central backend.
+> This playbook governs **service split, merge, domain ownership transfer and database migration** between independently deployed microservices.
 
 ## 1. Purpose
 

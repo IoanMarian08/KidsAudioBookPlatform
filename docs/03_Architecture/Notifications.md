@@ -429,7 +429,7 @@ Marketing emails require unsubscribe support that does not require login.
 
 ## 19. In-app inbox
 
-The inbox is the durable, account-scoped presentation layer for notifications. The **canonical public API contract is [API Specification](API_Specification.md) §§41–43**; historical PATCH-style endpoints below are replaced by the following routes:
+The inbox is the durable, account-scoped presentation layer for notifications. The **canonical public API contract is [API Specification](API_Specification.md) §§41–43**; supported notification operations use the following routes:
 
 ~~~text
 GET     /api/v1/notifications

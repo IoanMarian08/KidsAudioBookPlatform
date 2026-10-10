@@ -9,7 +9,7 @@ Decision: [ADR-0015](../../00_Project/ADR/ADR-0015-microservices-from-first-rele
 
 KidsAudioBookPlatform will be built as **independently deployable Java 21/Spring Boot microservices from the beginning**. Every service owns its business capability, logical PostgreSQL database and credentials, Flyway migrations, API/event contracts, tracing, tests and release lifecycle. One PostgreSQL cluster may host distinct databases for cost efficiency; shared business tables, direct cross-service SQL and distributed transactions are forbidden.
 
-There is **no initial monolith phase or later extraction milestone**. We may develop services sequentially, but each completed service remains a separate runnable artifact.
+Services may be developed sequentially, but every completed service must remain a separately runnable, testable and deployable artifact with a dedicated logical database.
 
 ## 2. Phases and dependencies
 

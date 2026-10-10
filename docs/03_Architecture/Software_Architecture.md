@@ -65,7 +65,7 @@ The platform follows these principles:
 
 ### 5.1 Initial deployment model
 
-**The initial backend is microservices-first, not a modular monolith.** The first release uses separate Spring Boot applications for identity, profiles, catalog, media, playback, billing, notifications and admin operations. An advertising-policy service is optional and gated by child-safety/legal/store approval. Shared infrastructure consists of PostgreSQL hosting **independent logical service databases**, RabbitMQ, Redis and private object storage/CDN. Workers are owned by their services and may scale separately.
+**The initial backend is microservices-first.** The first release uses separate Spring Boot applications for identity, profiles, catalog, media, playback, billing, notifications and admin operations. An advertising-policy service is optional and gated by child-safety/legal/store approval. Shared infrastructure consists of PostgreSQL hosting **independent logical service databases**, RabbitMQ, Redis and private object storage/CDN. Workers are owned by their services and may scale separately.
 
 ### 5.2 Service boundaries and runtime
 
@@ -576,7 +576,7 @@ Pull requests that alter architecture must update the relevant document, diagram
 
 ## 23. Service Evolution Playbook
 
-Microservices exist from the first release. There is **no modular-monolith extraction phase**. Changes to service boundaries require an ADR, a data ownership/migration plan, compatibility windows, new event/API contract tests, staged deployment and rollback strategy. Moving functionality between services must preserve the public routes, data deletion responsibilities, observability and security.
+Microservices are independently deployed from the first release. Changes to service boundaries require an ADR, a data ownership/migration plan, compatibility windows, new event/API contract tests, staged deployment and rollback strategy. Moving functionality between services must preserve the public routes, data deletion responsibilities, observability and security.
 
 Typical evolution steps: validate the need, define new owner and database, expand compatible contracts, migrate data through controlled backfill, dual-read/compare where permitted, switch traffic, remove obsolete consumers and verify independent recovery. See [ADR-0015](../00_Project/ADR/ADR-0015-microservices-from-first-release.md).
 

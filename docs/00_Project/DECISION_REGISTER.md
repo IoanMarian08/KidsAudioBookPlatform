@@ -22,7 +22,7 @@ Several documents correctly describe the **intended product**, while some engine
 | Monetization intent | Free and Premium; monthly/annual; proposed three-day trial; free-tier ad policy | [Product Bible](Product_Bible.md) |
 | Safety | Parent-held billing and controls, no behavioral child ad targeting | [Security Architecture](../03_Architecture/Security_Architecture.md) |
 
-**Architectural decision update (2026-10-10):** The product owner explicitly chose microservices, superseding the prior modular-monolith decision. This is an **accepted technical direction**, not an unresolved commercial assumption. See [ADR-0015](ADR/ADR-0015-microservices-from-first-release.md); deployment orchestration/cloud vendor selection in DEC-009 remains open.
+**Backend architecture (accepted):** Independent microservices from the first release with isolated logical PostgreSQL databases and authenticated REST/RabbitMQ contracts. See [ADR-0015](ADR/ADR-0015-microservices-from-first-release.md). Cloud vendor and deployment orchestrator selection in DEC-009 remain open.
 
 ## Launch decisions still requiring sign-off
 

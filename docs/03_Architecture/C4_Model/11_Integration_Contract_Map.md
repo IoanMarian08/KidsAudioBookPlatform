@@ -341,7 +341,7 @@ Breaking changes require:
 
 - a new major API or event version;
 - migration documentation;
-- telemetry for old-version usage;
+- telemetry for use of contract revisions pending retirement;
 - an announced support window;
 - dual support or dual publishing where necessary;
 - removal only after approved criteria are met.

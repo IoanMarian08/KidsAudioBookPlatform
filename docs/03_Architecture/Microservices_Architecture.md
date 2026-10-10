@@ -9,7 +9,7 @@ Decision: [ADR-0015](../00_Project/ADR/ADR-0015-microservices-from-first-release
 
 KidsAudioBookPlatform will have **separate Java 21/Spring Boot applications from the beginning**, with separately deployable container artifacts, independent database ownership, REST interfaces and RabbitMQ integration events. A monorepo is acceptable because deployables, not Git repository count, determine architecture.
 
-The public edge gateway handles routing, request limits and observability; it is **not** a monolithic backend. Service-to-service traffic stays private, authenticated, timed and contract-tested.
+The public edge gateway handles routing, request limits and observability; each business capability remains in its own independently deployed service. Service-to-service traffic stays private, authenticated, timed and contract-tested.
 
 ## 2. System landscape
 

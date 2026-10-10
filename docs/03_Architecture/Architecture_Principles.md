@@ -73,7 +73,7 @@ The strategic target is a service-oriented architecture with independently under
 
 The project must avoid both extremes:
 
-- a single unstructured monolith with tightly coupled modules;
+- one deployable containing unrelated business capabilities;
 - premature fragmentation into dozens of operationally expensive microservices.
 
 The preferred evolution model is:
@@ -83,7 +83,7 @@ The preferred evolution model is:
 3. deploy together where appropriate;
 4. deploy separate microservices from the first release per ADR-0015; later service splits or merges require a clear scaling, ownership, security or release benefit.
 
-Further service splits, merges or ownership transfers must be justified through an ADR; no monolith extraction phase is planned.
+Further service splits, merges or ownership transfers must be justified through an ADR and contract/data migration plan.
 
 ## 5. Bounded Contexts
 

@@ -317,7 +317,7 @@ This strategy is reviewed:
 
 ## 23. Related documents
 
-- `ADR-0015-microservices-from-first-release.md` (accepted; ADR-0001 is superseded)
+- `ADR-0015-microservices-from-first-release.md` (accepted architecture baseline)
 - `ADR-0011-feature-flags.md`
 - `ADR-0012-flyway-database-migrations.md`
 - `ADR-0013-versioning-strategy.md`

@@ -3,12 +3,11 @@
 - **Status:** Accepted
 - **Decision date:** 2026-10-10
 - **Decision owner:** Product owner (explicit architectural direction)
-- **Architecture impact:** Supersedes [ADR-0001: Start with a Modular Monolith](ADR-0001-modular-monolith-first.md).
-- **Historical context:** [ADR-002](ADR-002.md) proposed microservices in an early draft but was later superseded. This new ADR is the canonical decision, not a reactivation of the legacy document.
+- **Architecture baseline:** Independently deployable Java 21/Spring Boot microservices from the first release.
 
 ## 1. Context
 
-The previous baseline optimized for an initial modular monolith and deferred service extraction. The product owner has now explicitly decided that **KidsAudioBookPlatform must be based on microservices from the beginning**, not on a monolith. We must change the runtime architecture and delivery plan consistently while retaining the existing product contracts, security constraints and technology choices.
+**KidsAudioBookPlatform uses microservices from the beginning**: cohesive domain services with independent builds, deployments, persistence, security and observability. Product functionality and child-protection controls are enforced consistently across service boundaries.
 
 This is an intentional trade-off: independent deployment and data ownership are preferred even though they increase infrastructure, testing, observability, failure-handling and local development complexity.
 
@@ -62,7 +61,7 @@ Data migration and rollback are independently staged and contract-compatible. Ba
 
 ## 6. Repository and deployment approach
 
-The repository may remain a **monorepo**, but it must contain **separately built/deployed microservices**; monorepo does not mean monolith. CI tests only affected services plus cross-service contracts and global security gates. A container orchestration/deployment platform is required for staging/production; provider and Kubernetes-vs-managed-containers are **not yet decided**. Docker Compose can run local service containers.
+The repository may remain a **monorepo**, but it must contain **separately built/deployed microservices**; each microservice remains independently buildable and deployable. CI tests only affected services plus cross-service contracts and global security gates. A container orchestration/deployment platform is required for staging/production; provider and Kubernetes-vs-managed-containers are **not yet decided**. Docker Compose can run local service containers.
 
 Suggested code boundaries are documented in [Microservices Architecture](../../03_Architecture/Microservices_Architecture.md) and [Service Contracts](../../03_Architecture/Microservices_Contracts_and_Flows.md).
 
@@ -74,7 +73,6 @@ Mitigations: small **cohesive** service set, shared deployment/CI templates (not
 
 ## 8. Alternatives reconsidered
 
-- **Modular monolith:** operationally simpler; rejected for the first release by explicit product-owner decision. Historical decision retained in ADR-0001 as superseded.
 - **One service per table/domain noun:** rejected as excessive fragmentation.
 - **Direct synchronous calls for everything:** rejected because failure amplification/coupling would be unacceptable; events are required for noninteractive propagation.
 - **Shared transactional database across services:** rejected because it destroys independent ownership.
