@@ -6,23 +6,27 @@ Owner: Backend / QA
 
 ## 1. Purpose
 
-Test real interactions among application modules, PostgreSQL, Redis, RabbitMQ, object storage adapters and external provider contract boundaries. Unit tests cannot detect broken Flyway migrations, SQL mappings, outbox transactions, event serialization or API authorization filters.
+Test interactions within **each independently deployed Spring Boot microservice** and across remote service boundaries, PostgreSQL, Redis, RabbitMQ, object storage and provider contracts. Each service must own a distinct logical database and migration history ([ADR-0015](../00_Project/ADR/ADR-0015-microservices-from-first-release.md)). Unit tests cannot detect broken Flyway migrations, SQL mappings, outbox transactions, event serialization or API authorization filters.
 
 ## 2. Test environment
 
-Use Testcontainers for PostgreSQL and RabbitMQ; Redis and S3-compatible storage can use containers or standards-compliant test fixtures. Versions should match production major versions. Migrations run from an empty database as part of test bootstrap.
+Use Testcontainers for **service-owned PostgreSQL databases** and RabbitMQ; Redis and S3-compatible storage can use containers or standards-compliant fixtures. Use a **different database role for each service** and verify that foreign database SQL access is denied. Versions should match production major versions. Migrations run from an empty database as part of test bootstrap.
 
 External App Store/Play APIs and push/email providers use recorded sandbox contract fixtures or mocks; never use live production endpoints for CI.
 
 ## 3. Database tests
 
-- Verify Flyway migrations apply in order and on representative upgrade paths.
+- Verify **each service's independent Flyway migrations** apply in order and on representative upgrade paths.
 - Check uniqueness/foreign keys/null handling and optimistic locking.
 - Verify account-scoped queries cannot return foreign child profiles.
-- Assert transaction boundaries: business mutation and outbox record commit together.
+- Assert local transaction boundaries: business mutation and **service-owned outbox** record commit together; cross-service operations never rely on one shared DB transaction.
 - Test pagination with equal sort keys and empty/large datasets.
 - Confirm indexes for critical queries with representative data where warranted.
 - Verify rollback on expected exception and safe replay after an interrupted operation.
+
+### Cross-service REST contract and security tests
+
+Validate REST compatibility for old/new service versions, end-user and workload identity, downstream profile/Parent Zone ownership, request-deadline propagation and failure mapping. Simulate peer timeout, 503, circuit-open, stale projection and gateway bypass. Producer/consumer releases must be independently deployable without lockstep. Include explicit negative tests against service database boundaries.
 
 ## 4. Messaging and outbox tests
 

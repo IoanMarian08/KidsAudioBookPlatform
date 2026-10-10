@@ -16,7 +16,7 @@ A single communication style would either couple long-running work to user-facin
 
 Use HTTP REST with JSON for synchronous public and administrative APIs. Use RabbitMQ for asynchronous domain and integration events when temporal decoupling, retry, buffering, fan-out, or independent processing provides clear value.
 
-Internal module calls inside the modular monolith remain in-process. They must not be simulated through HTTP or RabbitMQ merely to imitate a distributed system.
+**Updated by [ADR-0015](ADR-0015-microservices-from-first-release.md):** domain capabilities are independently deployed microservices from the first release. Their communication is remote, using private authenticated REST/OpenAPI for synchronous requests and RabbitMQ for asynchronous integration. In-process application interfaces are allowed **only inside one owning service**; no cross-service direct Java module calls.
 
 ## Communication Selection Rules
 
@@ -303,7 +303,7 @@ A new communication pattern or broker requires a separate ADR.
 - Easier fan-out to notifications, analytics, search, and audit consumers.
 - Familiar API model for mobile and admin clients.
 - Explicit ownership and compatibility rules.
-- Preserves a simple modular monolith while enabling later extraction.
+- Supports independently deployed bounded contexts and stable service contracts from the first release.
 
 ### Negative
 
@@ -321,7 +321,7 @@ Rejected because it tightly couples background workflows and propagates downstre
 
 ### RabbitMQ for all internal communication
 
-Rejected because it would add unnecessary eventual consistency and operational complexity to simple in-process interactions.
+Rejected because it would add unnecessary eventual consistency to requests that require an immediate response; inside-service calls remain in-process, while cross-service communication uses the chosen REST/event patterns.
 
 ### Kafka as the initial event platform
 

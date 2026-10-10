@@ -22,59 +22,43 @@ The backend must support:
 - controlled advertising for free users;
 - persistent in-app notifications and push delivery;
 - content administration, publishing, moderation, and support operations;
-- auditability, observability, resilience, and future service extraction.
+- auditability, observability, resilience, and independent service deployment from the start.
 
 Where this document uses **must**, the rule is mandatory unless an accepted Architecture Decision Record explicitly replaces it.
 
 ## 2. Architectural style
 
-The initial backend is a **modular monolith with strict bounded contexts**. It is not an unstructured monolith, and it is not a distributed microservice system on day one.
+The initial backend is **independently deployable microservices from the first release**, as established by [ADR-0015](../00_Project/ADR/ADR-0015-microservices-from-first-release.md). These are **not** in-process modules packaged as one backend deployment. Each service uses Java 21/Spring Boot, feature-first Clean/Hexagonal layering, its own logical database and migration history, container image, CI target, security boundary, health checks and telemetry.
 
-The architecture combines:
+The [Microservices Architecture](Microservices_Architecture.md) defines the initial identity, profiles, catalog, media, playback, billing, notifications, admin and feature-gated advertising service ownership. REST/OpenAPI handles synchronous requests; RabbitMQ with service-owned outbox/inbox handles asynchronous integration. No shared SQL transactions or direct cross-service repository access.
 
-- domain-driven design for business boundaries;
-- clean and hexagonal architecture for dependency direction;
-- package-by-feature organization;
-- REST for synchronous client-facing operations;
-- RabbitMQ for asynchronous cross-module work;
-- PostgreSQL as the system of record;
-- Redis for cache, coordination, and selected short-lived state;
-- S3-compatible object storage for binary media;
-- explicit contracts that allow later extraction into microservices.
+~~~mermaid
+flowchart LR
+  Client[Flutter / React] --> GW[API Gateway]
+  GW --> ID[identity-service]
+  GW --> Profiles[profiles-service]
+  GW --> Catalog[catalog-service]
+  GW --> Media[media-service]
+  GW --> Playback[playback-service]
+  GW --> Billing[billing-service]
+  GW --> Notifications[notifications-service]
+  GW --> Admin[admin-service]
+  Playback --> Profiles
+  Playback --> Catalog
+  Playback --> Billing
+  Playback --> Media
+  Billing --> MQ[(RabbitMQ)]
+  Catalog --> MQ
+  MQ --> Notifications
+  Media --> CDN[Object Storage / CDN]
+~~~
 
-The deployment model may evolve without changing the conceptual ownership of modules.
-
-```mermaid
-graph LR
-    Mobile[Flutter Mobile App]
-    Admin[Admin Dashboard]
-    Edge[API Gateway]
-    Backend[Spring Boot Modular Backend]
-    Workers[Background Workers]
-    DB[(PostgreSQL)]
-    Cache[(Redis)]
-    Broker[(RabbitMQ)]
-    Storage[(Object Storage)]
-    CDN[CDN]
-
-    Mobile --> Edge
-    Admin --> Edge
-    Edge --> Backend
-    Backend --> DB
-    Backend --> Cache
-    Backend --> Broker
-    Broker --> Workers
-    Workers --> DB
-    Workers --> Storage
-    Storage --> CDN
-    Mobile --> CDN
-```
 
 ## 3. Core backend principles
 
 ### 3.1 Domain ownership
 
-Every business concept has exactly one owning module. Other modules may use public application contracts, public events, or dedicated read models, but they must not access another module's repositories, JPA entities, or internal packages.
+Every business concept has exactly one owning **service**. Other services may use versioned REST contracts, public events or their own read models, but they must not access another service's database, repositories, JPA entities or internal packages.
 
 ### 3.2 Dependency direction
 
@@ -109,11 +93,11 @@ Clients may display decisions returned by the backend, but they must not make au
 
 ### 3.4 Explicit boundaries over convenience
 
-A short-term convenience that bypasses a module boundary is not acceptable. Cross-module coupling must use a public contract, event, or dedicated query port.
+A short-term convenience that bypasses a module boundary is not acceptable. Cross-service coupling must use a versioned network contract (REST/OpenAPI), an event or a service-owned query projection.
 
 ### 3.5 Operational simplicity
 
-The architecture must remain proportionate to the size of the product and team. New infrastructure must solve a measurable problem and be documented through an ADR.
+Microservices are an explicit owner requirement; keep the service set cohesive and standardize builds, tracing and deployment to control overhead. New infrastructure beyond this baseline still requires justification and a documented decision.
 
 ## 4. Technology baseline
 
@@ -748,24 +732,12 @@ A backend change is complete only when:
 - architecture boundaries pass automated checks;
 - `PROJECT_CHANGELOG.md` is updated for significant changes.
 
-## 22. Extraction readiness
+## 22. Independent Service Readiness
 
-A module is a candidate for microservice extraction only when at least one condition is proven:
+Services are independently deployed from day one; there is **no future extraction prerequisite**. Before integrating a service, require: bounded-context/data ownership, a unique logical database and Flyway migrations, least-privilege credentials, versioned REST/event contracts, service identity, timeouts, idempotent retries/outbox/inbox, telemetry, health probes and a standalone deploy/rollback plan.
 
-- it requires materially different scaling;
-- it has an independent release cadence;
-- it needs a separate security boundary;
-- it is owned by a separate team;
-- its failure isolation brings measurable benefit.
+Changes to service boundaries require an ADR and a contract-compatible migration. For platform-wide deployment conventions see [Microservices Architecture](Microservices_Architecture.md).
 
-Before extraction, confirm:
-
-- clear data ownership;
-- stable public contracts;
-- event-driven integration where appropriate;
-- no direct database coupling;
-- independent observability;
-- operational readiness.
 
 ## 23. Related documents
 

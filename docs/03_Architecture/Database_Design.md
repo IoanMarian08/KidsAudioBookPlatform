@@ -15,7 +15,7 @@ The first production stage uses:
 - Redis for cache, rate-limit coordination, idempotency, and short-lived state;
 - S3-compatible object storage for audio, images, synchronized text artifacts, and offline packages.
 
-The initial deployment may use one PostgreSQL cluster and one physical database, but bounded-context ownership must be preserved so that selected domains can later be extracted into independent services and databases.
+**Microservices-first persistence:** every backend service owns a **separate logical PostgreSQL database**, scoped user/credentials, migration history and backup/restore procedures from its first deployment. For cost, these databases may share one PostgreSQL instance/cluster. A shared cluster is **not a shared application database**: SQL joins, foreign keys, JPA relationships and writes across services are prohibited. See [ADR-0015](../00_Project/ADR/ADR-0015-microservices-from-first-release.md).
 
 ## 2. Database Design Principles
 
@@ -104,8 +104,8 @@ PostgreSQL stores metadata, checksums, processing state, and object references.
 - only the owning module may modify its tables;
 - another module must not import the owner's JPA repositories;
 - cross-context reads use application contracts, APIs, or approved read models;
-- cross-schema foreign keys are allowed only in the modular-monolith stage and must be documented as extraction dependencies;
-- new cross-schema foreign keys require architecture review;
+- cross-service foreign keys are **forbidden**, even between databases hosted on the same PostgreSQL instance;
+- each service uses its own database user and Flyway schema history; cross-service references use opaque IDs and authorized APIs/events;
 - reporting queries must use read replicas or reporting views when production load justifies it.
 
 ## 5. Naming and Type Conventions
@@ -1509,7 +1509,7 @@ No query that can grow without bound may be exposed without pagination or an exp
 A bounded context is ready for database extraction when:
 
 - it owns all tables it writes;
-- cross-schema foreign keys have documented replacement strategies;
+- no cross-service foreign keys exist; the service owns its logical database and all tables it writes;
 - external modules do not query its internal tables;
 - integration events are versioned;
 - read models can be replicated or queried through APIs;

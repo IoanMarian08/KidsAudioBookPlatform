@@ -6,7 +6,7 @@ Owner: Engineering Enablement
 
 ## 1. Purpose
 
-Provide a reproducible local stack for backend API, worker, PostgreSQL, Redis, RabbitMQ and MinIO/object storage. Keep all development services local and disposable; no production secrets or customer data.
+Provide a reproducible local stack for the **API gateway and independent microservices** (identity, profiles, catalog, media, playback, billing, notifications and admin), plus PostgreSQL, Redis, RabbitMQ and MinIO/object storage. The sample below provisions shared infrastructure only; each service image is created once its code exists. Keep all development services local and disposable; no production secrets or customer data.
 
 ## 2. Reference services
 
@@ -15,13 +15,13 @@ services:
   postgres:
     image: postgres:16
     environment:
-      POSTGRES_DB: kids_audio_dev
-      POSTGRES_USER: app
+      POSTGRES_DB: postgres
+      POSTGRES_USER: local_admin
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set dev database password}
     ports: ["127.0.0.1:5432:5432"]
     volumes: ["pgdata:/var/lib/postgresql/data"]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U app -d kids_audio_dev"]
+      test: ["CMD-SHELL", "pg_isready -U local_admin -d postgres"]
       interval: 5s
       timeout: 3s
       retries: 15
@@ -62,7 +62,23 @@ volumes:
   miniodata:
 ~~~
 
-This is a local-only example, **not production configuration**. Pin tested image versions/digests before formalizing the Compose file. MinIO bucket bootstrap, API and worker definitions belong in the repository's actual Compose configuration. Environment variable substitutions enforce required development credentials.
+This is a local-only example, **not production configuration**. Pin tested image versions/digests before formalizing the Compose file. MinIO bucket bootstrap and **all individual service/gateway definitions** belong in the repository's actual Compose configuration. The `local_admin` Postgres credential in this infrastructure example is an **initialization-only development credential**; **no service may use it**. Every service must connect using its own non-superuser and logical database. Environment variable substitutions enforce required development credentials.
+
+### Required local logical databases
+
+Create `identity_db`, `profiles_db`, `catalog_db`, `media_db`, `playback_db`, `billing_db`, `notifications_db` and `admin_db` through a reproducible initialization script. Create a different database principal and password for each, grant privileges only on its own database, and run its own Flyway migrations. Local database names are examples, not fixed production names.
+
+~~~text
+# Schematic service configuration, not runnable Compose until the app exists
+services/playback-service:
+  datasource: jdbc:postgresql://postgres:5432/playback_db
+  database_user: playback_svc
+  gateway_route: /playback/**
+  peers: profiles-service, catalog-service, billing-service, media-service
+  broker_exchange: playback.events
+~~~
+
+Use container DNS names for service-to-service calls. A single service image or database principal shared by every domain is **not compliant** with ADR-0015.
 
 ## 3. Start/stop workflow
 
@@ -70,8 +86,8 @@ This is a local-only example, **not production configuration**. Pin tested image
 2. Run docker compose config and inspect substitutions.
 3. Run docker compose up -d.
 4. Wait for healthy dependencies and apply Flyway migrations.
-5. Start API and worker via IDE or local images.
-6. Run smoke checks: account -> catalog -> local media object -> playback authorization -> progress sync.
+5. Start gateway **and each implemented microservice** as individual containers/IDE processes, with service-owned worker processes where needed. Verify no shared application DB credentials.
+6. Run a cross-service smoke path: identity login → profiles lookup → catalog story → media signed URL → playback grant/progress. Confirm distributed trace propagation and at-least-once event dedup.
 7. Use docker compose down to stop; docker compose down -v **deletes local data** and requires explicit intention.
 
 ## 4. Isolation and safety

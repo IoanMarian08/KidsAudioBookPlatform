@@ -27,6 +27,10 @@ The audit enumerated the repository's Git tree, reviewed the Markdown files for 
 | AUD-010 | Medium | Docs have no tested automated local-link quality gate in source tree | Add lightweight checker and PR CI workflow |
 | AUD-011 | High | Notifications.md listed PATCH /notifications/{id}/read and /dismiss plus GET unread-count, while canonical API Specification declares POST /read and DELETE /notifications/{id} | Reconcile Notifications API table to API Specification |
 
+## Architecture decision revision — 2026-10-10
+
+**AUD-002 describes the initial audit baseline, not today's approved architecture.** The product owner subsequently required microservices from day one. [ADR-0015](ADR/ADR-0015-microservices-from-first-release.md) now supersedes the former ADR-0001 modular-monolith-first decision. The older ADR-002 stays a historical record, while ADR-0015 defines current service ownership, independent deployments and isolated logical databases. All implementation guides must use ADR-0015.
+
 ## Link review caveats
 
 A path-based Markdown scan found no confirmed missing **file targets** in existing Markdown. Seven directory references in docs/README are valid folder navigation, not broken file paths. In-document anchor fragments and external links require a separate validation pass. The automated checker should understand directory/README targets and provide reproducible CI output.

@@ -96,7 +96,7 @@ Admin contracts must enforce permission checks on every request. UI visibility i
 | Advertising Policy | Entitlements | Suppress ads for premium users | Immediate or bounded-staleness cache | Premium users must not receive ads after revocation target |
 | API composition | Multiple contexts | Build home or support view | Bounded parallel calls or projection | Partial response only where product-safe |
 
-In the modular monolith, these interactions are in-process interfaces. They must remain explicit and extraction-ready.
+These interactions are **independent service boundaries from the first release**. They must use contract-tested internal REST/OpenAPI or RabbitMQ events, with no foreign database access or cross-service ACID transactions. See [ADR-0015](../../00_Project/ADR/ADR-0015-microservices-from-first-release.md).
 
 ## 6. Asynchronous Event Map
 

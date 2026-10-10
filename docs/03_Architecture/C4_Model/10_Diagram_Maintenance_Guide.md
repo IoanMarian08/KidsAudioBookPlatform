@@ -490,7 +490,7 @@ The post-incident update should describe the corrected architecture, not the inc
 
 ## 20. Service Extraction Updates
 
-When a module is extracted from the modular monolith, update at minimum:
+When a new microservice is created or an existing service boundary changes, update at minimum:
 
 - System Context, if external actors or providers change;
 - Container Diagram;

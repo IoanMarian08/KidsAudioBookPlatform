@@ -6,7 +6,7 @@ Owner: QA and Engineering
 
 ## 1. Objective
 
-Verify KidsAudioBookPlatform as a safe, reliable child-first experience, not just as compilable code. Tests must prove parent authorization, isolated child profiles, curated catalog, correct entitlements, resilient audio playback, trustworthy progress synchronization and safe editorial workflows.
+Verify KidsAudioBookPlatform as a safe, reliable child-first experience, not just as compilable code. The backend is built as **independent microservices from the first release** ([ADR-0015](../00_Project/ADR/ADR-0015-microservices-from-first-release.md)); every service must pass standalone tests plus producer/consumer compatibility and distributed resilience tests. Tests must prove parent authorization, isolated child profiles, curated catalog, correct entitlements, resilient audio playback, trustworthy progress synchronization and safe editorial workflows.
 
 ## 2. Layers and ownership
 
@@ -14,14 +14,14 @@ Verify KidsAudioBookPlatform as a safe, reliable child-first experience, not jus
 |---|---|---|---|
 | Unit | Domain policies, validators, mappers, component logic | Feature developers | PR |
 | Integration | Spring+PostgreSQL/Redis/RabbitMQ, repositories, workers | Backend | PR |
-| Contract | REST/OpenAPI and versioned async events | Producer and consumer teams | PR |
+| Contract | **Cross-service** REST/OpenAPI and versioned RabbitMQ async events | Producer and consumer teams | PR |
 | Flutter widget | Navigation, screen states, accessibility semantics | Mobile | PR |
 | E2E/acceptance | Critical parent and child journeys | QA + feature team | Staging/release |
 | Security | AuthN/AuthZ, child data isolation, misuse cases | Security + QA | PR and release |
 | Performance | API latency, media startup, queue lag, capacity | Performance/DevOps | Pre-release |
 | Recovery | Backup restore, failover, controlled rollback | DevOps | Production readiness |
 
-No single layer replaces another. Prefer many fast deterministic tests plus targeted realistic integration and E2E tests.
+No single layer replaces another. Prefer fast deterministic tests plus targeted realistic integration and E2E. **Never substitute one shared application integration test for service-level isolation, remote failures and database ownership tests.**
 
 ## 3. Release-critical scenarios
 

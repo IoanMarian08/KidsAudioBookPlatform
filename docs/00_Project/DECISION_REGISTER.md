@@ -17,10 +17,12 @@ Several documents correctly describe the **intended product**, while some engine
 |---|---|---|
 | Target audience | Children 0–7; parent is authenticated principal | [Product Bible](Product_Bible.md) |
 | App/platform | Flutter for iOS and Android; protected Parent Zone | [Product Bible](Product_Bible.md), [ADR-0004](ADR/ADR-0004-flutter-mobile-platform.md) |
-| Backend MVP | Java 21/Spring Boot **modular monolith with workers**, not service-per-context from day one | [ADR-0001](ADR/ADR-0001-modular-monolith-first.md) |
+| Backend MVP | **Independent Java 21/Spring Boot microservices from the first release**, each with its own logical PostgreSQL database, REST and RabbitMQ contracts | [ADR-0015](ADR/ADR-0015-microservices-from-first-release.md) |
 | Content | Curated audio, synchronized text, illustrations, bedtime/ambient features | [Product Bible](Product_Bible.md) |
 | Monetization intent | Free and Premium; monthly/annual; proposed three-day trial; free-tier ad policy | [Product Bible](Product_Bible.md) |
 | Safety | Parent-held billing and controls, no behavioral child ad targeting | [Security Architecture](../03_Architecture/Security_Architecture.md) |
+
+**Architectural decision update (2026-10-10):** The product owner explicitly chose microservices, superseding the prior modular-monolith decision. This is an **accepted technical direction**, not an unresolved commercial assumption. See [ADR-0015](ADR/ADR-0015-microservices-from-first-release.md); deployment orchestration/cloud vendor selection in DEC-009 remains open.
 
 ## Launch decisions still requiring sign-off
 

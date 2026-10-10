@@ -9,7 +9,7 @@ Last reviewed: 2026-07-14
 
 This document defines the deployment view for KidsAudioBookPlatform. It maps the logical containers described in the C4 model to runtime nodes, network boundaries, infrastructure services, and deployment environments.
 
-The deployment model is designed for an initial production-ready modular monolith while preserving clear extraction paths toward independently deployable services.
+The production baseline is **independently deployed Java 21/Spring Boot microservices from the first release**; a single backend API deployment is forbidden by [ADR-0015](../../00_Project/ADR/ADR-0015-microservices-from-first-release.md).
 
 ## 2. Scope
 
@@ -44,99 +44,56 @@ This deployment view covers:
 
 ## 4. Production deployment overview
 
-```mermaid
+~~~mermaid
 flowchart TB
-    subgraph Clients[Client Devices]
-        Mobile[Flutter Mobile App\niOS / Android]
-        Browser[Admin Browser]
-    end
+  Mobile[Flutter App] --> Edge[HTTPS Edge / API Gateway]
+  AdminUI[Admin Dashboard] --> Edge
+  subgraph PrivateServices[Private service runtime; independently deployed/scaled]
+    I[identity-service]
+    P[profiles-service]
+    C[catalog-service]
+    M[media-service and worker]
+    PL[playback-service]
+    B[billing-service and worker]
+    N[notifications-service and worker]
+    A[admin-service]
+  end
+  Edge --> I
+  Edge --> P
+  Edge --> C
+  Edge --> M
+  Edge --> PL
+  Edge --> B
+  Edge --> N
+  Edge --> A
+  PL --> P
+  PL --> C
+  PL --> B
+  PL --> M
+  subgraph Stateful[Private shared infrastructure]
+    Databases[(PostgreSQL: independent service databases)]
+    MQ[(RabbitMQ)]
+    Cache[(Redis isolated keys)]
+    Storage[(Private object storage)]
+  end
+  I --> Databases
+  P --> Databases
+  C --> Databases
+  M --> Databases
+  PL --> Databases
+  B --> Databases
+  N --> Databases
+  A --> Databases
+  B --> MQ
+  C --> MQ
+  MQ --> N
+  M --> Storage
+  Storage --> CDN[CDN]
+  Mobile --> CDN
+~~~
 
-    subgraph Edge[Public Edge]
-        DNS[DNS]
-        CDN[CDN]
-        WAF[WAF / Rate Limiting]
-        LB[HTTPS Load Balancer]
-    end
+**Database illustration:** a PostgreSQL *server/cluster* may be shared for MVP cost; each service connects only to its own database and user. This is not a shared-database microservices design. Service networks and broker queues are private; service-to-service identities are separate from end-user sessions.
 
-    subgraph AppZone[Private Application Network]
-        API1[Spring Boot API Instance 1]
-        API2[Spring Boot API Instance 2]
-        Worker1[Async Worker Instance 1]
-        Worker2[Async Worker Instance 2]
-        AdminUI[Admin Dashboard Static Assets]
-    end
-
-    subgraph DataZone[Private Data Network]
-        PG[(PostgreSQL Primary)]
-        PGReplica[(PostgreSQL Read Replica - optional)]
-        Redis[(Redis)]
-        MQ[(RabbitMQ)]
-        Object[(Object Storage)]
-    end
-
-    subgraph Observability[Observability Zone]
-        Prom[Prometheus / Metrics]
-        Logs[Loki / Log Storage]
-        Trace[Trace Backend]
-        Grafana[Grafana]
-        Alerts[Alert Manager]
-    end
-
-    subgraph External[External Providers]
-        FCM[Firebase Cloud Messaging]
-        Stores[Apple / Google Billing]
-        Email[Email Provider]
-    end
-
-    Mobile --> DNS
-    Browser --> DNS
-    DNS --> CDN
-    CDN --> WAF
-    WAF --> LB
-    LB --> API1
-    LB --> API2
-    CDN --> AdminUI
-
-    API1 --> PG
-    API2 --> PG
-    API1 --> Redis
-    API2 --> Redis
-    API1 --> MQ
-    API2 --> MQ
-    API1 --> Object
-    API2 --> Object
-
-    Worker1 --> MQ
-    Worker2 --> MQ
-    Worker1 --> PG
-    Worker2 --> PG
-    Worker1 --> Object
-    Worker2 --> Object
-
-    API1 --> Stores
-    API2 --> Stores
-    Worker1 --> FCM
-    Worker2 --> FCM
-    Worker1 --> Email
-    Worker2 --> Email
-
-    API1 --> Prom
-    API2 --> Prom
-    Worker1 --> Prom
-    Worker2 --> Prom
-    API1 --> Logs
-    API2 --> Logs
-    Worker1 --> Logs
-    Worker2 --> Logs
-    API1 --> Trace
-    API2 --> Trace
-    Worker1 --> Trace
-    Worker2 --> Trace
-    Prom --> Grafana
-    Logs --> Grafana
-    Trace --> Grafana
-    Prom --> Alerts
-```
 
 ## 5. Deployment nodes
 
@@ -184,38 +141,14 @@ The public edge contains:
 
 The edge must reject malformed or oversized requests before they consume backend resources where possible.
 
-### 5.4 Spring Boot API instances
+### 5.4 Spring Boot service deployments
 
-API instances host the synchronous HTTP application.
+Every identity, profiles, catalog, media, playback, billing, notifications and admin service has its own image and release lifecycle. Replicas are stateless, independently autoscaled and gated by liveness/readiness. Routing is performed by the gateway to the owner of each public API prefix; no instance contains all domain capabilities.
 
-Characteristics:
+### 5.5 Service-owned workers
 
-- stateless across requests;
-- horizontally scalable;
-- immutable application image;
-- no local durable storage;
-- readiness and liveness probes;
-- graceful shutdown;
-- bounded connection and executor pools;
-- externalized configuration;
-- structured logging and tracing.
+Media processing, notification delivery and subscription/provider reconciliation run in separate process/container deployments associated with their owning service. A worker may read/write **only that service's database**; cross-service coordination occurs via REST or RabbitMQ. Workers have dedicated queue policies, health checks and scaling/rollback controls.
 
-Session continuity must rely on signed tokens and designated shared infrastructure, not in-memory affinity.
-
-### 5.5 Asynchronous workers
-
-Workers process operations such as:
-
-- notification dispatch;
-- media validation and transformation;
-- search indexing;
-- analytics aggregation;
-- outbox publication;
-- scheduled cleanup;
-- administrative exports;
-- subscription reconciliation.
-
-Workers use the same versioned application image when practical, but run a separate process profile and scale independently from API instances.
 
 ### 5.6 PostgreSQL
 
@@ -628,27 +561,12 @@ Dashboards must allow teams to correlate deployments with changes in latency, er
 | Observability stack | DevOps / Platform | All engineering teams |
 | CI/CD pipelines | DevOps / Platform | Repository owners |
 
-## 20. Microservice evolution
+## 20. Independent Microservices Operations
 
-The initial modular monolith may evolve into separate deployable services when justified by:
+Deploy and rollback services individually while maintaining contract compatibility. Each service owns runtime identity, secrets, database migration history, SLOs, dead-letter queues and recovery instructions. Shared PostgreSQL hosting does not justify shared schema ownership.
 
-- independent scaling needs;
-- distinct availability requirements;
-- clear data ownership;
-- separate release cadence;
-- team ownership boundaries;
-- proven performance bottlenecks;
-- isolation of high-risk workloads.
+Every service failure must be observable through distributed traces and request/event correlation; cross-service timeouts and circuit-breaking require measured budgets. New/split/merged services need an ADR, data movement and contract migration plan. There is **no monolith-to-microservices extraction phase**.
 
-Potential early extraction candidates include:
-
-- media processing workers;
-- notifications;
-- search indexing;
-- subscription reconciliation;
-- analytics aggregation.
-
-Extraction must preserve observability, security, event contracts, idempotency, and operational ownership.
 
 ## 21. Deployment review checklist
 

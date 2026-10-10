@@ -9,7 +9,7 @@ Last reviewed: 2026-07-14
 
 This document describes the internal component structure of the KidsAudioBookPlatform backend container. It defines the major backend components, their responsibilities, dependency rules, runtime interactions, and extension points.
 
-The backend is designed as a modular monolith with explicit bounded contexts and clean internal boundaries. The same boundaries are intended to support later extraction into independently deployable services when operational or scaling needs justify it.
+The backend consists of **independently deployable Spring Boot microservices from the first release**. Each business context lives in an owning service with an isolated logical database and stable REST/RabbitMQ contracts; internal components remain layered using Clean Architecture. See [ADR-0015](../../00_Project/ADR/ADR-0015-microservices-from-first-release.md).
 
 ## 2. Scope
 
@@ -31,88 +31,51 @@ It does not define implementation-level classes. Those belong to the code-level 
 
 ## 3. Architectural style
 
-The backend follows these structural rules:
-
-1. Package by bounded context.
-2. Clean Architecture dependency direction.
-3. Controllers are transport adapters only.
-4. Application services orchestrate use cases.
-5. Domain components contain business rules.
-6. Infrastructure components implement technical concerns.
-7. Persistence models are not exposed through the API.
-8. Cross-context communication uses explicit contracts.
-9. Asynchronous side effects use domain events and the outbox pattern.
-10. External integrations are isolated behind anti-corruption layers.
+Each microservice has its own API/application/domain/infrastructure components, database adapters, outbox and consumer inbox. Services communicate over authenticated internal REST/OpenAPI interfaces or RabbitMQ integration events, **not in-process module references or shared JPA repositories**. The gateway only routes/validates at the edge; downstream services independently authorize calls.
 
 ## 4. High-level component diagram
 
-```mermaid
-flowchart LR
-    Mobile[Flutter Mobile App]
-    Admin[Admin Dashboard]
+~~~mermaid
+flowchart TB
+  Mobile[Flutter Mobile] --> GW[HTTPS API Gateway]
+  AdminUI[Admin Dashboard] --> GW
+  subgraph S[Independent services and their internal components]
+    ID[identity-service: API + auth policies + session persistence]
+    P[profiles-service: API + ownership/controls + profile persistence]
+    C[catalog-service: API + publication policies + catalog persistence + outbox]
+    PL[playback-service: API + access/use cases + progress persistence + outbox]
+    M[media-service: API + processing use cases + asset persistence]
+    B[billing-service: API + verification + entitlements + outbox]
+    N[notifications-service: API + inbox + workers]
+    A[admin-service: API + admin orchestration + audit]
+  end
+  GW --> ID
+  GW --> P
+  GW --> C
+  GW --> PL
+  GW --> M
+  GW --> B
+  GW --> N
+  GW --> A
+  PL --> C
+  PL --> P
+  PL --> B
+  PL --> M
+  B --> Rabbit[(RabbitMQ)]
+  C --> Rabbit
+  Rabbit --> N
+  C --> DB[(Service-owned PostgreSQL databases)]
+  ID --> DB
+  P --> DB
+  PL --> DB
+  M --> DB
+  B --> DB
+  N --> DB
+  A --> DB
+~~~
 
-    subgraph Backend[KidsAudioBookPlatform Backend]
-        API[API Layer]
-        Security[Security Component]
-        Identity[Identity & Access Context]
-        Profile[Profiles Context]
-        Catalog[Catalog Context]
-        Playback[Playback Context]
-        Subscription[Subscription Context]
-        Notification[Notification Context]
-        Media[Media Context]
-        AdminCtx[Administration Context]
-        Shared[Shared Technical Components]
-        Outbox[Outbox Publisher]
-        Consumers[Message Consumers]
-    end
+The database node represents **multiple isolated logical databases**, not one common service database. Each service's detailed API, application, domain, and infrastructure diagram is an **internal component view of that service**. Business rule classes may be reused as technical patterns but never as a shared mutable domain layer.
 
-    DB[(PostgreSQL)]
-    Redis[(Redis)]
-    MQ[(RabbitMQ)]
-    Storage[(Object Storage)]
-    Providers[External Providers]
-
-    Mobile --> API
-    Admin --> API
-    API --> Security
-    API --> Identity
-    API --> Profile
-    API --> Catalog
-    API --> Playback
-    API --> Subscription
-    API --> Notification
-    API --> AdminCtx
-
-    Identity --> DB
-    Profile --> DB
-    Catalog --> DB
-    Playback --> DB
-    Subscription --> DB
-    Notification --> DB
-    Media --> DB
-    AdminCtx --> DB
-
-    Catalog --> Redis
-    Playback --> Redis
-    Subscription --> Redis
-    Identity --> Redis
-
-    Media --> Storage
-    Subscription --> Providers
-    Notification --> Providers
-
-    Identity --> Outbox
-    Profile --> Outbox
-    Catalog --> Outbox
-    Playback --> Outbox
-    Subscription --> Outbox
-    Outbox --> MQ
-    MQ --> Consumers
-    Consumers --> Notification
-    Consumers --> Media
-    Consumers --> Shared
-```
 
 ## 5. API layer
 
@@ -652,26 +615,12 @@ Metrics must be labeled by stable, low-cardinality values.
 | External adapter | Contract tests and failure simulations |
 | End-to-end flow | Production-like happy-path and critical failure-path tests |
 
-## 27. Microservice extraction readiness
+## 27. Microservice Component Readiness
 
-A bounded context is a candidate for extraction when one or more of the following are true:
+All listed domains are microservices from the start. Before a service is called implementation-ready, verify its individually deployable image, endpoint/event contracts, unique logical PostgreSQL database and credential, per-service Flyway migrations, ownership controls, outbound deadline/retry policy, outbox/inbox idempotency, distributed tracing, tests, and operational alerts.
 
-- it requires independent scaling;
-- it has a distinct operational profile;
-- release coupling becomes harmful;
-- the team ownership model requires separation;
-- security or compliance boundaries require isolation;
-- its data lifecycle differs materially;
-- its failures must be isolated from the rest of the backend.
+Changing the service boundary requires an ADR and a migration/compatibility plan, not a future extraction milestone. See [Microservices Contracts](../Microservices_Contracts_and_Flows.md).
 
-Before extraction, verify:
-
-- explicit API or event contracts already exist;
-- persistence ownership is clear;
-- no cross-context table writes exist;
-- synchronous dependencies are understood;
-- observability is sufficient;
-- local transactions do not span contexts.
 
 ## 28. Architecture review checklist
 

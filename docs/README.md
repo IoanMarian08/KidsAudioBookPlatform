@@ -12,7 +12,7 @@ KidsAudioBookPlatform is a parent-controlled audio-story platform for children i
 **Recommended reading order for a new contributor:**
 1. [Product Bible](00_Project/Product_Bible.md) and [Project Charter](00_Project/Project_Charter.md).
 2. [Product Requirements](01_Product/Product_Requirements_Document.md), [Functional Requirements](01_Product/Functional_Requirements.md), [Nonfunctional Requirements](01_Product/Non_Functional_Requirements.md).
-3. [Software Architecture](03_Architecture/Software_Architecture.md), [Backend Architecture](03_Architecture/Backend_Architecture.md), [API Specification](03_Architecture/API_Specification.md).
+3. [Microservices Architecture](03_Architecture/Microservices_Architecture.md), [Software Architecture](03_Architecture/Software_Architecture.md), [Backend Architecture](03_Architecture/Backend_Architecture.md), [API Specification](03_Architecture/API_Specification.md).
 4. [Coding Standards](04_Engineering/Coding_Standards.md), [Git Workflow](04_Engineering/Git_Workflow.md), [Definition of Done](04_Engineering/Definition_of_Done.md).
 5. [Implementation Blueprints](07_Blueprints/README.md) for module-specific contracts and validation.
 6. [Testing Strategy](06_Testing/Testing_Strategy.md) and [CI/CD](05_DevOps/CI_CD.md).
@@ -68,7 +68,7 @@ Parent Zone is protected separately from Child World. The backend is authoritati
 
 ## 8. Current scope and open decisions
 
-The current design is a modular monolith with Spring Boot/Java 21, Flutter, PostgreSQL, Redis, RabbitMQ, object storage/CDN and background workers. Deployment specifics, final brand token values, billing offer/trial eligibility, country-specific legal requirements and operational RTO/RPO need explicit review and confirmation before launch. Proposed targets are not production certification.
+The current accepted design uses **independently deployable Spring Boot/Java 21 microservices** from the first release, with per-service logical PostgreSQL databases, Flutter, Redis, RabbitMQ, object storage/CDN and service-owned workers. See [ADR-0015](00_Project/ADR/ADR-0015-microservices-from-first-release.md) and [Microservices Architecture](03_Architecture/Microservices_Architecture.md). Deployment specifics, final brand token values, billing offer/trial eligibility, country-specific legal requirements and operational RTO/RPO need explicit review and confirmation before launch. Proposed targets are not production certification.
 
 ## 9. Finding the right depth
 

@@ -6,16 +6,16 @@ Owner: DevOps and Engineering
 
 ## 1. Pipeline objective
 
-Every source change must produce attributable test results and immutable artifacts. Protected branches reject unreviewed changes and failing quality gates. Production receives only artifacts already tested in staging.
+Every source change must produce attributable test results and immutable artifacts **for each independently built/deployed microservice**. Java services have separate build/test/image/migration units, while cross-service contracts and security journeys are validated together. Protected branches reject unreviewed changes and failing quality gates. Production receives only artifacts already tested in staging.
 
 ## 2. Required pull-request checks
 
 | Stage | Evidence |
 |---|---|
 | Repository hygiene | Formatting, license/secret scan, protected-branch policy |
-| Backend build | Java 21 compilation, Maven dependency checks |
-| Backend tests | JUnit unit + Testcontainers integration + architecture checks |
-| API and schemas | OpenAPI/schema lint + consumer compatibility checks |
+| Service builds | Build affected Java 21/Spring Boot microservices separately, plus shared technical libraries |
+| Per-service tests | JUnit unit, service-owned PostgreSQL Testcontainers integration and forbidden cross-service dependency checks |
+| Cross-service contracts | OpenAPI consumer/provider compatibility + versioned RabbitMQ event schemas and idempotency/ordering checks |
 | Flutter | Analyze/format/test, widget/golden/a11y checks where configured |
 | Admin dashboard | Lint/build/test when module exists |
 | Security | SAST, SCA, secrets, container vulnerabilities, SBOM |
@@ -38,7 +38,7 @@ flowchart LR
     Observe -->|failure| Rollback[Rollback to prior digest]
 ~~~
 
-Git SHA and artifact digest identify every deployment. Retain logs, approval record, migration version, changelog and rollback decision.
+Git SHA **plus each service's artifact digest** identifies a deployment. A release can deploy one service without rebuilding/redeploying other services. Retain per-service logs, approval, contract versions, Flyway database revision and rollback decision.
 
 ## 4. Release control
 
@@ -46,7 +46,7 @@ Git SHA and artifact digest identify every deployment. Retain logs, approval rec
 - No long-lived production tokens in repository variables.
 - Require manual approval for production promotions and protected deployment environments.
 - Feature flags allow independent activation; flags must have owner and removal date.
-- Database schema uses backward-compatible expand/migrate/contract.
+- **Each owning service** manages its own Flyway migrations and backward-compatible expand/migrate/contract; no service deploy may modify another service's database.
 - Migration down scripts are not assumed safe; tested forward fix may be the preferred recovery.
 - New mobile features must tolerate older app versions and delayed store rollouts.
 
@@ -75,7 +75,7 @@ jobs:
       - run: mvn -B verify
 ~~~
 
-Adjust paths/workflows to actual monorepo modules. Pin action SHAs in production workflows. Flutter, admin, container, scan and deployment jobs are required additions, not implied by the example above.
+The YAML above is a **generic illustration**, not a deployable multi-service CI pipeline. The actual repository must implement a matrix/paths-based build per `services/*-service`, with each service's Maven tests, image digest, security/SBOM scan and integration tests. Include contract verification against peers, gateway routing smoke, cross-service E2E, and independent staging/prod promotion for every service. Pin action SHAs in production workflows.
 
 ## 7. Traceability and metrics
 

@@ -188,7 +188,7 @@ Acceptance conditions:
 - cross-context data is accessed through application contracts or read models;
 - Flyway migrations remain ownership-aware.
 
-### TD-002 — Modular monolith depends on convention enforcement
+### TD-002 — Microservices distributed-systems and contract overhead
 
 | Field | Value |
 |---|---|
@@ -196,12 +196,12 @@ Acceptance conditions:
 | Priority | P2 |
 | Status | Accepted |
 | Affected components | Spring Boot backend |
-| Reason | A modular monolith is intentionally preferred over premature microservices |
-| Current impact | Module isolation is not guaranteed by deployment boundaries |
-| Future risk | Package-level coupling can turn the application into a distributed-unfriendly monolith |
+| Reason | Product owner chose independent microservices from the first release under ADR-0015 |
+| Current impact | Remote calls, event delivery, per-service databases and tracing require more CI and operational work |
+| Future risk | Chatty RPC, contract drift, authorization gaps, cascading failures and excess infrastructure cost |
 | Owner | Architecture |
-| Review trigger | New bounded context, architecture violation, or service extraction |
-| Proposed remediation | ArchUnit rules, package visibility, module tests, dependency matrix, architecture review gate |
+| Review trigger | New service, contract changes, cascading incident or data-ownership violation |
+| Proposed remediation | Per-service databases, OpenAPI/event contract CI, outbox/inbox, timeouts, resilience tests, tracing, cost review and standardized releases |
 
 ### TD-003 — Initial event contracts may evolve rapidly
 

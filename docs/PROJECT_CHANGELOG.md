@@ -4,6 +4,16 @@ Version: 2.0.0
 Status: Active  
 Note: This log covers **documentation**; it does not imply an application release.
 
+## 2026-10-10 — Owner-approved microservices-first architecture
+
+The owner explicitly changed the implementation direction to **independently deployable microservices from the first release**, superseding the earlier modular-monolith choice in ADR-0001. New [ADR-0015](00_Project/ADR/ADR-0015-microservices-from-first-release.md) defines current service ownership, logical database separation, REST/RabbitMQ integration, data consistency, resiliency and delivery gates.
+
+- Updated Software/Backend/Database architecture and C4 container/component/code/deployment views.
+- Added [Microservices Architecture](03_Architecture/Microservices_Architecture.md) and [Microservices Contracts](03_Architecture/Microservices_Contracts_and_Flows.md).
+- Replaced monolith-era roadmap/extraction guidance with independent-service build and future boundary migration.
+- Updated project charter, goals, PRD, tech stack, infrastructure, CI/CD, deployment and blueprint references.
+- This is a **documentation decision/change**, not a claim that code or infrastructure has been deployed.
+
 ## 2026-10-10 — Documentation clarity and coherence audit
 
 The post-merge audit was conducted against main. Work is isolated on branch docs/documentation-audit-2026-10 pending review/merge.

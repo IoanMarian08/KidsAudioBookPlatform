@@ -22,7 +22,7 @@ These views are implementation-oriented and must remain synchronized with:
 - `../Technology_Stack.md`;
 - `../../00_Project/ADR/README.md`.
 
-The diagrams are not decorative assets. They are reviewable architecture contracts used during implementation, onboarding, threat modeling, service extraction, production readiness, and incident analysis.
+The diagrams are not decorative assets. They are reviewable architecture contracts used during implementation, onboarding, threat modeling, service boundary migration, production readiness, and incident analysis.
 
 ## 2. C4 View Set
 
@@ -212,112 +212,64 @@ flowchart TB
     Worker --> Obs
 ```
 
-The initial deployment model is a modular monolith with asynchronous workers. Logical module boundaries exist before independent service boundaries.
+The initial deployment model is **independent microservices from the first release**, with separate logical PostgreSQL databases and service-owned workers. [ADR-0015](../../00_Project/ADR/ADR-0015-microservices-from-first-release.md) is authoritative; [ADR-0001](../../00_Project/ADR/ADR-0001-modular-monolith-first.md) is superseded.
 
-## 7. Canonical Backend Component Summary
+## 7. Canonical Microservices Summary
 
-```mermaid
-flowchart LR
-    Delivery[REST and Messaging Delivery]
+~~~mermaid
+flowchart TB
+  Client[Flutter / React] --> Gateway[HTTPS API Gateway]
+  subgraph Services[Independently deployable Java 21 / Spring Boot]
+    Identity[identity-service]
+    Profiles[profiles-service]
+    Catalog[catalog-service]
+    Media[media-service]
+    Playback[playback-service]
+    Billing[billing-service]
+    Notifications[notifications-service]
+    Admin[admin-service]
+  end
+  Gateway --> Identity
+  Gateway --> Profiles
+  Gateway --> Catalog
+  Gateway --> Media
+  Gateway --> Playback
+  Gateway --> Billing
+  Gateway --> Notifications
+  Gateway --> Admin
+  Playback --> Profiles
+  Playback --> Catalog
+  Playback --> Billing
+  Playback --> Media
+  Billing --> Broker[(RabbitMQ)]
+  Catalog --> Broker
+  Broker --> Notifications
+  Services --> DB[(Service-owned logical PostgreSQL DBs)]
+~~~
 
-    Identity[Identity and Access]
-    Profiles[Profile Management]
-    Catalog[Content Catalog]
-    Media[Media]
-    Playback[Playback and Progress]
-    Entitlements[Entitlements]
-    Subscriptions[Subscriptions and Billing]
-    Downloads[Downloads and Offline]
-    Notifications[Notifications]
-    Advertising[Advertising Eligibility]
-    Administration[Administration and Audit]
-
-    Persistence[Persistence Adapters]
-    Providers[External Provider Adapters]
-    Events[Outbox and Event Adapters]
-
-    Delivery --> Identity
-    Delivery --> Profiles
-    Delivery --> Catalog
-    Delivery --> Playback
-    Delivery --> Entitlements
-    Delivery --> Subscriptions
-    Delivery --> Downloads
-    Delivery --> Notifications
-    Delivery --> Administration
-
-    Catalog --> Media
-    Playback --> Entitlements
-    Downloads --> Entitlements
-    Advertising --> Entitlements
-    Administration --> Catalog
-    Administration --> Media
-
-    Identity --> Persistence
-    Profiles --> Persistence
-    Catalog --> Persistence
-    Media --> Persistence
-    Playback --> Persistence
-    Entitlements --> Persistence
-    Subscriptions --> Persistence
-    Downloads --> Persistence
-    Notifications --> Persistence
-    Advertising --> Persistence
-    Administration --> Persistence
-
-    Subscriptions --> Providers
-    Notifications --> Providers
-    Media --> Providers
-    Advertising --> Providers
-
-    Identity --> Events
-    Profiles --> Events
-    Catalog --> Events
-    Playback --> Events
-    Subscriptions --> Events
-    Downloads --> Events
-    Notifications --> Events
-```
-
-This summary is intentionally less detailed than `03_Component_Diagram.md`. The detailed file remains the authoritative component view.
+A PostgreSQL cylinder represents **several isolated logical databases** sharing hosting, not a shared application schema. Each service owns its own migration history, DB user, REST/event contracts, telemetry and independent release.
 
 ## 8. Code Structure Summary
 
-```text
-backend/
-  bootstrap/
-  shared-kernel/
-    api/
-    security/
-    observability/
-    events/
-    validation/
-  identity/
-    api/
-    application/
-    domain/
-    infrastructure/
-  profiles/
-  catalog/
-  media/
-  playback/
-  entitlements/
-  subscriptions/
-  downloads/
-  notifications/
-  advertising/
-  administration/
-```
+Each service is a separate build and deployment unit. Internal Clean Architecture layers are repeated inside each service; there is no single business-domain backend artifact.
 
-Mandatory dependency direction:
+~~~text
+services/
+  identity-service/
+    pom.xml
+    src/main/java/.../{api,application,domain,infrastructure}
+  profiles-service/
+  catalog-service/
+  media-service/
+  playback-service/
+  billing-service/
+  notifications-service/
+  admin-service/
+gateway/
+shared-technical-contracts/     # Transport helpers only, no shared JPA/domain model
+~~~
 
-```text
-Delivery -> Application -> Domain
-Infrastructure -> Application Ports
-Domain -> no framework or infrastructure dependencies
-```
-
-A module may expose application interfaces and events. It may not expose repositories, JPA entities, internal database tables, or provider-specific models as cross-module contracts.
+**Service boundary:** cross-service integration uses private REST/OpenAPI, RabbitMQ and ownership-checked IDs. Never import another service's domain repositories/entities or read its database.
 
 ## 9. Modeling Conventions
 

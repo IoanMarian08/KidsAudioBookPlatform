@@ -32,9 +32,10 @@ Technology choices must follow these principles:
 |---|---|
 | Backend runtime | Java 21 LTS |
 | Backend framework | Spring Boot 3.x |
+| Architecture style | **Independently deployable microservices from first release**; [ADR-0015](../00_Project/ADR/ADR-0015-microservices-from-first-release.md) |
 | Mobile | Flutter and Dart |
 | Administrative web | React and TypeScript |
-| Primary database | PostgreSQL |
+| Primary database | PostgreSQL with **separate logical database and Flyway history per service** |
 | Cache and ephemeral coordination | Redis |
 | Message broker | RabbitMQ |
 | Media storage | S3-compatible object storage |
@@ -73,7 +74,10 @@ Exact versions are pinned in build files and dependency-management configuration
 - Transactions are short, explicit, and centered on one business use case.
 - External network calls are not performed while holding database locks unless the flow explicitly requires it and has been reviewed.
 - Background consumers are idempotent and safe under redelivery.
-- Cross-module access uses application interfaces or events, not another module's repository.
+- Cross-**service** communication uses authenticated internal REST/OpenAPI or versioned RabbitMQ events, not direct calls into another service's implementation or repository.
+- Each service has its own database, DB credentials, migration history, build/image and CI/release unit. No cross-service JPA entities, transactions, FK/SQL joins or foreign database reads.
+- Remote calls must have timeouts, retry/idempotency policy, distributed tracing and service-to-service authorization.
+- RabbitMQ producers use their own transactional outbox and consumers use idempotent inbox/dedup logic.
 - Reflection-based convenience libraries are evaluated carefully because they can hide behavior and complicate debugging.
 - New dependencies require a clear owner, purpose, license review, and vulnerability review.
 

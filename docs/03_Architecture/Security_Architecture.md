@@ -593,7 +593,7 @@ Requirements:
 
 ## 25. Service-to-Service Security
 
-During the modular-monolith phase, internal modules communicate in-process through explicit interfaces. If services are extracted, they must use:
+**From the first release**, independently deployed microservices communicate over the network; there is no modular-monolith phase. The following are mandatory for every inter-service call (see [ADR-0015](../00_Project/ADR/ADR-0015-microservices-from-first-release.md)):
 
 - TLS for all traffic;
 - workload identity or short-lived service credentials;
@@ -640,7 +640,9 @@ Database security requirements:
 
 - private network access;
 - TLS connections;
-- separate migration, runtime-read/write, read-only, and operational roles;
+- a **separate logical database and service principal per deployed service**, including isolated migrations and backups;
+- no cross-service SQL access, DB foreign keys or business transactions even on the same PostgreSQL cluster;
+- separate migration, runtime-read/write, read-only, and operational roles within each service database;
 - least-privilege schema grants;
 - encrypted backups;
 - protected credentials supplied through a secret manager;

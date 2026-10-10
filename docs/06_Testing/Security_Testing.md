@@ -6,7 +6,7 @@ Owner: Security / Backend / QA
 
 ## 1. Threat-driven scope
 
-Test authentication, authorization, protected Parent Zone, privacy of child profiles, verified billing, signed media URLs, editorial upload/publishing, messaging and infrastructure boundaries. Use OWASP ASVS and Mobile Application Security testing concepts appropriate to risk.
+Test authentication, authorization, protected Parent Zone, privacy of child profiles, verified billing, signed media URLs, editorial upload/publishing, messaging and infrastructure boundaries. Services are deployed independently from the first release: each must enforce user authorization and **service-to-service identity**, even when traffic bypasses the API gateway. Use OWASP ASVS and Mobile Application Security testing concepts appropriate to risk.
 
 Testing must not use actual children's personal data, real billing credentials, or external systems without authorization.
 
@@ -28,6 +28,10 @@ Testing must not use actual children's personal data, real billing credentials, 
 | SEC-012 | Logging access tokens/child PII | Sanitization prevents leak |
 | SEC-013 | Deleted/archived profile direct access | Not found/forbidden, no data disclosure |
 | SEC-014 | Rate limit denial of service | Safe throttling without starving critical operations |
+| SEC-015 | Direct request to a service, bypassing gateway | Service independently authenticates caller and checks account/profile ownership |
+| SEC-016 | Service A attempts SQL access to service B database | Database network/user permissions deny foreign access |
+| SEC-017 | Forged service-to-service JWT/identity | Denied; no escalation to privileged domain operation |
+| SEC-018 | Async event impersonation or schema downgrade | Producer identity and version checked, poison event quarantined |
 
 ## 3. Security testing layers
 

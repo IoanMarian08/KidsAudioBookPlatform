@@ -77,7 +77,7 @@ The parent owns the account and controls child profiles. Profile selection is no
 
 Not in v1: public chat, social feeds, child-generated content, public author APIs, voice cloning, free-form generative story responses to children, public rankings, or real-time voice assistants. Future proposals need ADR, risk review and a revised PRD.
 
-Technical constraints: Flutter, Java 21 / Spring Boot modular monolith plus workers, PostgreSQL, Redis, RabbitMQ, object storage/CDN. Keep architecture-specific details in [Software Architecture](../03_Architecture/Software_Architecture.md).
+Technical constraints: Flutter, **independently deployable Java 21/Spring Boot microservices from the first release**, one logical PostgreSQL database per service, Redis, RabbitMQ, private object storage/CDN and service-owned workers. The accepted architecture is [ADR-0015](../00_Project/ADR/ADR-0015-microservices-from-first-release.md); see [Microservices Architecture](../03_Architecture/Microservices_Architecture.md) for owning services.
 
 ## 7. Success signals
 

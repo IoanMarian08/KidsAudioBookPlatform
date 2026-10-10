@@ -583,7 +583,7 @@ The system context establishes the following constraints:
 7. External notifications and webhooks must be idempotent.
 8. External provider failures must not corrupt internal state.
 9. Sensitive child data must not be placed in logs, telemetry, or third-party AI prompts.
-10. The initial deployment may be a modular monolith, but bounded-context ownership must remain explicit.
+10. The initial deployment **must use microservices**, with independent builds/deployments, isolated service-owned data, and versioned REST/RabbitMQ contracts.
 
 ## 16. Out-of-scope capabilities for the first production release
 

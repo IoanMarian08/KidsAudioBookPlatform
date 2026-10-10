@@ -9,7 +9,7 @@ Last reviewed: 2026-07-14
 
 This document defines the code-level structure of a backend feature module in KidsAudioBookPlatform. It complements the system context, container, and component diagrams by showing how code inside a bounded context must be organized and how responsibilities flow from the API boundary to the domain and infrastructure layers.
 
-The model is intentionally implementation-oriented. It is the reference for new modules, refactoring, code review, automated architecture tests, and future microservice extraction.
+The model defines **components inside each independently deployable microservice**, not modules bundled into a monolith. Each service has its own source/build, domain policy, database, migrations, REST/event contracts and release lifecycle (see [ADR-0015](../../00_Project/ADR/ADR-0015-microservices-from-first-release.md)).
 
 ## 2. Scope
 
@@ -33,7 +33,7 @@ The examples use the Catalog bounded context, but the same rules apply to every 
 flowchart LR
     Client[Mobile or Admin Client]
 
-    subgraph CatalogModule[Catalog Module]
+    subgraph CatalogModule[catalog-service internal components]
         Controller[StoryController]
         RequestMapper[StoryRequestMapper]
         UseCase[CreateStoryUseCase]
@@ -50,8 +50,8 @@ flowchart LR
         EventAdapter[OutboxEventPublisher]
     end
 
-    Database[(PostgreSQL)]
-    Outbox[(Outbox Table)]
+    Database[(catalog_db only)]
+    Outbox[(catalog_db outbox)]
 
     Client --> Controller
     Controller --> RequestMapper
@@ -98,7 +98,7 @@ Infrastructure implements ports declared by the application or domain layers.
 
 ## 5. Required package structure
 
-Each bounded context uses package-by-feature and keeps internal layers inside that feature.
+Each independently deployed service uses package-by-feature and keeps internal layers inside its **own** build. This example belongs to `services/catalog-service`, not a single root business application shared with other services.
 
 ```text
 com.kidsaudiobookplatform.catalog
@@ -146,7 +146,7 @@ com.kidsaudiobookplatform.catalog
     ├── cache
     │   └── CachedStoryQueryAdapter.java
     └── configuration
-        └── CatalogModuleConfiguration.java
+        └── CatalogServiceConfiguration.java
 ```
 
 ## 6. Layer responsibilities
@@ -617,20 +617,18 @@ Before approving a module change, verify:
 - tests cover success, validation, authorization, and failure cases;
 - no internal type leaks across module boundaries.
 
-## 22. Microservice extraction readiness
+## 22. Microservice Implementation Readiness
 
-A module is ready for future extraction when:
+**No extraction is planned: services are distinct deployments from day one.** Each service maintains:
+- its own Maven artifact, Docker image, runtime identity and environment settings;
+- local PostgreSQL logical database, Flyway migrations and DB principal;
+- versioned OpenAPI and RabbitMQ event schemas with consumer/producer contract tests;
+- request deadlines, remote-failure policy, outbox/inbox and idempotent event consumers;
+- local unit/integration tests and multi-service security/acceptance evidence;
+- service-level dashboards, traces, logs, health checks and release/rollback procedure.
 
-- it owns its data model;
-- all external access occurs through explicit contracts;
-- cross-module calls are limited and observable;
-- events are stable and versioned;
-- no other module queries its tables directly;
-- background jobs are owned by the module;
-- configuration and metrics are identifiable by module;
-- failure behavior is documented.
+Shared libraries contain only carefully versioned technical abstractions, never shared domain persistence entities. Cross-service interaction occurs over the network; do not instantiate another service's repository/handler.
 
-The modular monolith must preserve these boundaries before distributed deployment is considered.
 
 ## 23. Anti-patterns
 

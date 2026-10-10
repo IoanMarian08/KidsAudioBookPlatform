@@ -24,7 +24,7 @@ These documents bridge **product intentions** and **implementable module tasks**
 
 ## Shared implementation rules
 
-- Start as a **modular monolith**, with independent bounded contexts and worker deployable as needed; follow [ADR-0001](../00_Project/ADR/ADR-0001-modular-monolith-first.md).
+- Build **independently deployable microservices from the first release**, each with its own logical database, REST/OpenAPI and RabbitMQ event contracts; follow [ADR-0015](../00_Project/ADR/ADR-0015-microservices-from-first-release.md) and [Microservices Architecture](../03_Architecture/Microservices_Architecture.md).
 - Java 21/Spring Boot, feature-first organization; keep domain and application code independent of framework internals.
 - Use PostgreSQL as the authoritative store, Redis only for reconstructible short-lived state and RabbitMQ with transactional outbox for reliable asynchronous work.
 - Require adult authorization for privileged actions, server-side ownership for every child-profile resource and verified provider entitlement for paid access.
