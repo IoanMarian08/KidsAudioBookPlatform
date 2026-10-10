@@ -128,3 +128,140 @@ Done criteria:
 Critical delivery chain: US-001 -> US-003 -> US-004 -> US-005 -> US-006. Editorial upload/publication US-011 is required for live content; US-002 and US-009 gate monetization. Build P0 capabilities before P1 polish. Child safety, entitlement integrity and operational readiness are non-negotiable.
 
 Related: [Functional Requirements](Functional_Requirements.md), [PRD](Product_Requirements_Document.md), [Definition of Ready](../04_Engineering/Definition_of_Ready.md).
+
+
+## 8. Expanded behavior-driven backlog
+
+The stories below expand the existing US-001..US-012. They reference the stable FS rule IDs; any example threshold is intentionally omitted when Product/Legal has not decided it. Story IDs are unique and should not be reused.
+
+### US-013 (P0): Secure session rotation and revocation
+As a parent I want account sessions to be secure and individually revocable so a lost device cannot continue using my account.
+
+- Given a valid session, when its refresh token rotates, then the previous refresh token cannot issue a new session.
+- Given I revoke a session, when that device requests a protected account/profile endpoint, then it is denied.
+- Given a different parent account, when I try to view its sessions by ID, then I receive no private session details.
+- Related: FS-ID-007..011; FR-ID-002; SCR-ID-08.
+
+### US-014 (P0): Safe sibling switching
+As a parent of two children I want each child to have completely separate listening state.
+
+- Given profile A has a favorite and a partially listened story, when selecting B, then A's data is removed from B's view before B's own content loads.
+- Given a cached foreign profile ID, when requesting its details, then backend rejects it.
+- Related: FS-PR-003/007/008/016; FR-PR-003; SCR-PR-01.
+
+### US-015 (P0): Content eligibility after changing parental settings
+As a parent I want content restrictions to apply even to saved links.
+
+- Given a story is eligible, when I block its category for profile A, then new playback for A is rejected.
+- Given profile B remains eligible, when opening the same story under B, then B's own independent policy applies.
+- Related: FS-PZ-008..011, FS-CA-001/016; FR-PR-005.
+
+### US-016 (P0): Publisher refuses unsafe media
+As an editorial reviewer I want scanning and rights to be mandatory before publication.
+
+- Given an audio scan is pending or failed, when Publish is requested, then the story stays unavailable to children.
+- Given an editor lacks approval permission, when invoking Approve directly, then the operation fails and an audit reason is recorded.
+- Related: FS-AM-008..015, FS-CQ-001..010; FR-CA-004/005.
+
+### US-017 (P0): Playback interrupted gracefully
+As a young listener I want to return to a story without losing my place.
+
+- Given a story is playing, when the phone receives an audio focus interruption, then the player pauses/ducks safely and the UI matches audible state.
+- Given network fails then returns, when retrying, then the last authorized position is available without duplicate completion.
+- Related: FS-PL-005..011/021; FR-PL-002/003.
+
+### US-018 (P1): Synchronized images and narration
+As a child beginning to read I want displayed text and pictures to follow the audio accurately.
+
+- Given segments are published, when seeking between them, then the highlighted text and illustration match the new audio time.
+- Given an optional image is missing, then narration stays usable with an approved fallback.
+- Related: FS-PL-012..016; FR-PL-007.
+
+### US-019 (P1): Verified offline library
+As a parent I want eligible downloads to work on a trip without internet.
+
+- Given Premium verified access and sufficient space, when requesting a download, then an authorized scoped grant is created.
+- Given bytes are incomplete or corrupt, when transfer ends, then the item is not Ready.
+- Given offline license expired, then behavior follows an approved rights policy instead of perpetual access.
+- Related: FS-OF-010..015; FR-PL-005; DEC-013.
+
+### US-020 (P0): Cross-device progress reconciliation
+As a parent I want a child’s completed story to remain completed even when an offline device syncs stale data.
+
+- Given device B completed a story online, when device A later sends an older partial position, then Completed is not replaced.
+- Given the same offline operation is sent twice, then backend records one logical mutation.
+- Related: FS-OF-016..020; FR-PL-004; DEC-014.
+
+### US-021 (P0): Verified Premium purchase and restoration
+As a parent I want to know whether the store verified my paid rights.
+
+- Given a purchase callback but no server verification, then Premium remains Pending.
+- Given a verified purchase, when restoring from a second approved device on the same account, then rights are restored without granting another account access.
+- Given refund, when requesting new Premium media, then the grant is denied.
+- Related: FS-SU-004..015; FR-SU-002..005.
+
+### US-022 (P1): Parent controls notification preferences
+As a parent I want to choose nonessential notification types.
+
+- Given optional marketing is turned off, when its event is produced, then no optional marketing message is delivered.
+- Given push delivery fails, then the in-app inbox can still record the event without blocking audio.
+- Related: FS-NO-001..008; FR-NO-001..003.
+
+### US-023 (P1): Adult requests account data deletion
+As a parent I want a safe, understandable deletion process.
+
+- Given I have no valid adult challenge, when requesting deletion, then it is rejected.
+- Given a deletion job is still processing in one microservice, then the application never displays Completed.
+- Given an offline device reconnects after completed deletion, then it does not restore deleted account data.
+- Related: FS-PV-004..008; FR-ID-004; DEC-008/017.
+
+### US-024 (P0): Content takedown wins over caching
+As a content moderator I want a withdrawn story to stop being newly playable promptly.
+
+- Given the story was previously visible, when it is suspended, then its search visibility and new media grants are denied.
+- Given a delayed publish event arrives, then the current suspended state remains authoritative.
+- Related: FS-CA-004/016, FS-AM-015, FS-CQ-005; PRD-08.
+
+### US-025 (GATED): Noninterruptive optional ad
+As a parent I want any advertising to respect my child's attention and data privacy.
+
+- Given advertising has no legal/store approval, when a story completes, then no ad SDK or ad placement is activated.
+- Given verified Premium, then post-session ad eligibility is denied.
+- Given a repeated completion, then only one qualified session is counted.
+- Related: FS-AD-001..010; PRD-13; DEC-004.
+
+### US-026 (P0): Parent Zone cannot be bypassed
+As a parent I want all sensitive settings protected even if someone opens a direct link.
+
+- Given the adult session is authenticated but elevated proof has expired, when changing profile restrictions, then the service denies the update.
+- Given repeated invalid PIN input, then server-enforced throttling/lockout follows approved policy.
+- Related: FS-PZ-001..007; FR-PR-004.
+
+### US-027 (P1): Calm accessible controls
+As a child with limited reading or motor ability I want to find and play a story with recognizable, accessible controls.
+
+- Given reduced motion enabled, then navigation/player remain fully functional without animated cues.
+- Given screen reader enabled, then controls have meaningful labels and focus order.
+- Given low connectivity, then offline and empty states are not confused.
+- Related: FS-GL-001..014; PRD-14.
+
+### US-028 (P1): Safe editorial localization
+As an editor I want voice, text, illustrations and metadata to remain coherent across languages.
+
+- Given localized narration is not ready, when attempting locale-specific publication, then the workflow refuses an inconsistent release.
+- Given a published audio rendition is replaced, then synchronized text/illustrations must be reverified.
+- Related: FS-CQ-004..010; FR-CA-007; DEC-007.
+
+## 9. Story completeness template
+
+Every story delivered to development includes:
+- PRD + FR + FS cross references and affected SCR screen IDs;
+- approved actor and eligibility rules;
+- acceptance tests including foreign-account and invalid-input cases;
+- exact API/contract and owning microservice;
+- offline, concurrency, retry and content/entitlement transitions where applicable;
+- localization, accessibility and privacy impacts;
+- product decisions marked OPEN/GATED, not guessed;
+- release flag and QA evidence.
+
+Unapproved plan prices, profile limits, ad vendor and trial eligibility are not valid acceptance criteria until decided.

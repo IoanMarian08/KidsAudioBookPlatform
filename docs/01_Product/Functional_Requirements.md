@@ -94,3 +94,51 @@ Ads are **not** an unconditional MVP feature. If commercial policy approves free
 Every FR requires named owner, story link, request/response/API contract where relevant, data migration impact, access-control matrix, error behavior, analytics/privacy review, observability and automated tests. A P0 FR is not complete until these checks pass in staging.
 
 Related: [PRD](Product_Requirements_Document.md), [User Stories](User_Stories.md), [Testing Strategy](../06_Testing/Testing_Strategy.md).
+
+
+## 11. Functional specification rule families
+
+The [Complete Functional Specification](Functional_Specification/README.md) is the detailed source for each rule, user-visible state and Given/When/Then test. The following is a traceability index, **not a replacement** for the acceptance evidence defined there.
+
+| Functional rules | Product area | FR coverage | Owning implementation |
+|---|---|---|---|
+| FS-GL-001..014 | World navigation, accessibility, safe errors and device interruptions | All FRs | Flutter plus owning services |
+| FS-ID-001..018 | Adult registration, verification, login, recovery, sessions and deletion request | FR-ID-001..005 | identity-service |
+| FS-PR-001..017 | Profile creation, ownership, Child Room and switching | FR-PR-001..005 | profiles-service + catalog/playback |
+| FS-CA-001..016 | Curated discovery, categories, series and safe search | FR-CA-001..007 | catalog-service |
+| FS-PL-001..023 | Playback, synchronized text/images, ambient sound and completion | FR-PL-001..004/006/007 | playback-service + media-service |
+| FS-OF-001..020 | Favorites, history, progress, downloads, offline sync | FR-PL-003..005 | playback-service + media-service |
+| FS-PZ-001..018 | Parent Zone elevation and adult controls | FR-PR-004/005, FR-ID-005 | identity-service + profiles-service |
+| FS-SU-001..016 | Store purchases, trials, billing status and verified rights | FR-SU-001..006 | billing-service |
+| FS-AD-001..010 | Optional ad eligibility and child-safety safeguards | GATED; PRD-13 | advertising-policy-service only after approval |
+| FS-NO-001..008 | Parent notification inbox/preferences/devices | FR-NO-001..003 | notifications-service |
+| FS-SP-001..004 | Adult support request | FR-SP-001 | admin-service or approved support adapter |
+| FS-PV-001..008 | Child data minimization, export design and deletion saga | FR-ID-004 plus privacy controls | owning services / identity coordination |
+| FS-AM-001..022 | Restricted staff editorial, media workflows and support audit | FR-CA-004/005, FR-AD-001..003 | admin/catalog/media/billing |
+| FS-CQ-001..010 | Rights, age review, audio quality and sync media acceptance | FR-CA-004/005/007 | content staff + catalog/media |
+
+## 12. Mandatory negative requirements
+
+All capabilities implement the following security and behavior constraints:
+
+| Boundary | Negative requirement |
+|---|---|
+| Adult authentication | Expired/revoked token, reset replay or foreign session ID never grants authority |
+| Parent Zone | Missing/expired elevated proof never permits PIN, profile restrictions, subscription or account deletion |
+| Profiles | Sibling/other-parent IDs never expose favorites/history/progress |
+| Catalog | Draft, suspended, blocked-age or rights-expired content never gets new playable grants |
+| Playback | Seeking to end or repeated completion never creates unearned duplicate completion |
+| Billing | Client success or delayed provider event never grants unverified Premium |
+| Offline | Corrupt/partial bytes never appear Ready; stale progress never rewinds Completed |
+| Notifications | Opted-out optional messages are not sent; push provider outage does not block audio |
+| Administration | Editor without permissions cannot approve/publish; unscanned asset never becomes public |
+| Privacy | Deletion is not declared complete before each required owning service confirms |
+| Monetization | Child-targeted ads remain disabled until approved; no child behavioral targeting |
+
+## 13. Feature handoff record
+
+Every implementation PR references: FR ID, FS IDs, screens from [Screen Inventory](Functional_Specification/13_Screen_Inventory_and_UX_Handoff.md), positive/negative acceptance cases, API path(s), owning microservice, data migration/outbox impact, privacy review, observable outcome and deployment gate. If an API operation is missing or undecided, create an explicit contract task; do not introduce a public endpoint silently.
+
+## 14. Decisions that block hardcoding
+
+[Decision Register](../00_Project/DECISION_REGISTER.md) governs exact pricing/trials, age/locale/retention, profile quotas, ad eligibility, offline rights, completion threshold, Parent Zone security windows, notification cadence, data export and editorial roles. Implement safe foundations and configuration interfaces where justified, but mark dependent user behavior gated until approval.
