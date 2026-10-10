@@ -4,6 +4,10 @@ Version: 2.0.0
 Status: Active  
 Note: This log covers **documentation**; it does not imply an application release.
 
+## 2026-10-10 — Full-documentation microservices consistency sweep
+
+Following ADR-0015, reviewed all 138 Markdown documents for stale monolith-first wording and corrected residual statements in accepted ADRs, C4 policies, data ownership, integration contracts, Engineering and DevOps. Historical superseded decisions remain preserved for traceability. See [Documentation Audit](00_Project/DOCUMENTATION_AUDIT.md) for scope and limitations. This is documentation, not executable microservice code.
+
 ## 2026-10-10 — Owner-approved microservices-first architecture
 
 The owner explicitly changed the implementation direction to **independently deployable microservices from the first release**, superseding the earlier modular-monolith choice in ADR-0001. New [ADR-0015](00_Project/ADR/ADR-0015-microservices-from-first-release.md) defines current service ownership, logical database separation, REST/RabbitMQ integration, data consistency, resiliency and delivery gates.
