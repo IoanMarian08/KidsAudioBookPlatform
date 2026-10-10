@@ -406,7 +406,7 @@ Update the relevant C4 documents when a change introduces or modifies:
 - a synchronous or asynchronous integration;
 - an authorization boundary;
 - a new critical runtime flow;
-- a service extraction;
+- a service split, merge or ownership transfer;
 - a deployment topology;
 - operational ownership;
 - scaling or failover behavior.
@@ -487,7 +487,7 @@ Review cadence:
 - during every architecture-impacting pull request;
 - before each major milestone or release;
 - during production-readiness review;
-- after service extraction or major infrastructure change;
+- after a service-boundary migration or major infrastructure change;
 - after incidents that reveal undocumented dependencies;
 - at least quarterly while the platform is under active development.
 

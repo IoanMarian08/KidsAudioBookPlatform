@@ -68,7 +68,7 @@ Each entry must contain:
 
 | ID | Risk | L | I | Exposure | Treatment | Owner | Status |
 |---|---|---:|---:|---:|---|---|---|
-| AR-001 | Modular boundaries erode and create a tightly coupled monolith | 3 | 4 | 12 | Reduce | Backend Architecture | Mitigating |
+| AR-001 | Microservice boundaries erode through foreign DB access, shared JPA entities or synchronous call chains | 3 | 4 | 12 | Reduce | Backend Architecture | Mitigating |
 | AR-002 | Subscription provider delays create incorrect entitlement windows | 3 | 5 | 15 | Reduce | Subscription Engineering | Mitigating |
 | AR-003 | Offline clients retain stale premium access longer than policy permits | 3 | 5 | 15 | Reduce | Mobile and Backend | Mitigating |
 | AR-004 | Notification retries produce duplicate or intrusive delivery | 3 | 3 | 9 | Reduce | Notifications | Monitoring |
@@ -82,7 +82,7 @@ Each entry must contain:
 | AR-012 | Mobile-store review or rollout delay blocks urgent client fixes | 3 | 4 | 12 | Reduce | Mobile and Product | Monitoring |
 | AR-013 | Feature flags remain permanently active and increase behavioral complexity | 3 | 3 | 9 | Reduce | Engineering | Monitoring |
 | AR-014 | External push, email, CDN, or object-storage outage affects user journeys | 3 | 4 | 12 | Reduce/Transfer | DevOps | Monitoring |
-| AR-015 | Rapid service extraction introduces distributed-system complexity before readiness | 2 | 4 | 8 | Avoid | Architecture | Monitoring |
+| AR-015 | Microservices-first operational complexity exceeds CI, observability or team capacity | 3 | 4 | 12 | Reduce | Architecture | Monitoring |
 
 ## 6. Example detailed record
 
