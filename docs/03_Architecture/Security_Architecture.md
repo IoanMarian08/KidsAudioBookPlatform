@@ -593,7 +593,7 @@ Requirements:
 
 ## 25. Service-to-Service Security
 
-**From the first release**, independently deployed microservices communicate over the network; there is no modular-monolith phase. The following are mandatory for every inter-service call (see [ADR-0015](../00_Project/ADR/ADR-0015-microservices-from-first-release.md)):
+**From the first release**, independently deployed microservices communicate over authenticated network contracts. The following are mandatory for every inter-service call (see [ADR-0015](../00_Project/ADR/ADR-0015-microservices-from-first-release.md)):
 
 - TLS for all traffic;
 - workload identity or short-lived service credentials;
@@ -967,7 +967,7 @@ This document must be reviewed when:
 - a new privileged role is introduced;
 - a new external provider is integrated;
 - media upload formats change;
-- a module is extracted into a microservice;
+- a microservice is added, split or changes business/data ownership;
 - sensitive data collection changes;
 - a security incident exposes an architectural weakness;
 - infrastructure moves to a new hosting or multi-region model.
