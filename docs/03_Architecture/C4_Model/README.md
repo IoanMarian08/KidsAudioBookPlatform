@@ -152,67 +152,60 @@ The authenticated parent account is the primary security principal. A child prof
 
 ## 6. Canonical Container Summary
 
-```mermaid
+The containers are **independently deployable** Spring Boot services behind a public gateway. Each service owns a **separate logical PostgreSQL database**, credentials, Flyway migrations and deployment. Shared PostgreSQL hosting is an infrastructure optimization, not a shared business database.
+
+~~~mermaid
 flowchart TB
-    subgraph Clients
-        Mobile[Flutter Mobile Application]
-        AdminUI[Admin Web Dashboard]
-    end
+  Mobile[Flutter Mobile App] --> Gateway[HTTPS API Gateway]
+  AdminUI[React Admin Dashboard] --> Gateway
+  subgraph Services[Private independent Spring Boot microservices]
+    ID[identity-service]
+    Profiles[profiles-service]
+    Catalog[catalog-service]
+    Media[media-service]
+    Playback[playback-service]
+    Billing[billing-service]
+    Notif[notifications-service]
+    Admin[admin-service]
+  end
+  Gateway --> ID
+  Gateway --> Profiles
+  Gateway --> Catalog
+  Gateway --> Media
+  Gateway --> Playback
+  Gateway --> Billing
+  Gateway --> Notif
+  Gateway --> Admin
+  Playback --> Profiles
+  Playback --> Catalog
+  Playback --> Billing
+  Playback --> Media
+  subgraph Infrastructure[Shared hosting; separate service ownership]
+    DB[(Per-service PostgreSQL databases)]
+    Redis[(Redis: scoped cache)]
+    MQ[(RabbitMQ: versioned events)]
+    Object[(Private object storage)]
+  end
+  ID --> DB
+  Profiles --> DB
+  Catalog --> DB
+  Media --> DB
+  Playback --> DB
+  Billing --> DB
+  Notif --> DB
+  Admin --> DB
+  Billing --> MQ
+  Catalog --> MQ
+  MQ --> Notif
+  Media --> Object
+  Object --> CDN[Signed CDN delivery]
+  Mobile --> CDN
+  Notif --> Push[Push / Email providers]
+  Billing --> Stores[Apple / Google stores]
+  Services --> Obs[Metrics, Logs and Traces]
+~~~
 
-    subgraph Edge
-        Gateway[Reverse Proxy or API Gateway]
-    end
-
-    subgraph Application Runtime
-        API[Spring Boot Backend API]
-        Worker[Asynchronous Worker Runtime]
-    end
-
-    subgraph Data and Messaging
-        PG[(PostgreSQL)]
-        Redis[(Redis)]
-        MQ[(RabbitMQ)]
-        Object[(S3-compatible Object Storage)]
-    end
-
-    subgraph External Delivery
-        CDN[CDN]
-        Push[Push Provider]
-        Stores[Apple and Google Billing]
-        Email[Email Provider]
-        Ads[Advertising Provider]
-    end
-
-    subgraph Operations
-        Obs[Metrics, Logs and Traces]
-    end
-
-    Mobile -->|HTTPS REST| Gateway
-    AdminUI -->|HTTPS REST| Gateway
-    Gateway --> API
-
-    API --> PG
-    API --> Redis
-    API --> MQ
-    API --> Object
-    API --> Stores
-    API --> Ads
-
-    Worker --> MQ
-    Worker --> PG
-    Worker --> Redis
-    Worker --> Object
-    Worker --> Push
-    Worker --> Email
-
-    Object --> CDN
-    Mobile -->|signed media access| CDN
-
-    API --> Obs
-    Worker --> Obs
-```
-
-The initial deployment model is **independent microservices from the first release**, with separate logical PostgreSQL databases and service-owned workers. [ADR-0015](../../00_Project/ADR/ADR-0015-microservices-from-first-release.md) is authoritative; [ADR-0001](../../00_Project/ADR/ADR-0001-modular-monolith-first.md) is superseded.
+**Data boundary:** every arrow from a service to the database group represents that service's **own** logical database and service account. Service workers for scanning, notifications and reconciliation are separate processes owned by the respective microservice. Advertising is a distinct optional policy service and remains disabled until product/legal/security approval. See [ADR-0015](../../00_Project/ADR/ADR-0015-microservices-from-first-release.md).
 
 ## 7. Canonical Microservices Summary
 
