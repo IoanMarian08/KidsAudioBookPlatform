@@ -2,11 +2,11 @@
 
 | Field | Value |
 |---|---|
-| Version | 2.0.0 |
+| Version | 3.0.0 |
 | Status | Active |
 | Owner | Ioan Marghioala |
 | Contributors | Product, Design, Architecture, Engineering |
-| Last Updated | 2026-07-15 |
+| Last Updated | 2026-10-10 |
 | Repository | KidsAudioBookPlatform |
 | Scope | Product Foundation |
 
@@ -970,3 +970,119 @@ This document must be reviewed when:
 - a future idea becomes committed scope.
 
 Changes must preserve a clear distinction between validated decisions, current scope, and future hypotheses.
+
+---
+
+## 35. Complete Functional Specification and Product Authority
+
+Product Bible establishes the product's identity, emotional promise, high-level capabilities and non-negotiable child/parent boundaries. For precise screens, user actions, state transitions, validation, edge cases and testable outcomes, the companion **[Complete Functional Specification](../01_Product/Functional_Specification/README.md)** is the functional implementation handbook.
+
+| Product concept | Functional implementation reference |
+|---|---|
+| Two-World model, accessibility and app navigation | [01 Global Behavior](../01_Product/Functional_Specification/01_Global_Behavior_and_Navigation.md) |
+| Parent account, sessions and recovery | [02 Identity and Accounts](../01_Product/Functional_Specification/02_Onboarding_Identity_and_Accounts.md) |
+| Child profiles, personalization and Child Room | [03 Profiles and Child Room](../01_Product/Functional_Specification/03_Profiles_Child_Room_and_Personalization.md) |
+| Curated stories, safe discovery, search and series | [04 Catalog and Discovery](../01_Product/Functional_Specification/04_Catalog_Search_and_Discovery.md) |
+| Narration, text/illustration sync and ambience | [05 Story Player](../01_Product/Functional_Specification/05_Story_Player_Text_and_Ambience.md) |
+| Listening progress, favorites, downloads and offline | [06 History and Sync](../01_Product/Functional_Specification/06_Favorites_History_Downloads_and_Sync.md) |
+| Adult-only settings and family restrictions | [07 Parent Zone](../01_Product/Functional_Specification/07_Parent_Zone_and_Controls.md) |
+| Free/Premium, purchases, trials and downgrade | [08 Subscriptions](../01_Product/Functional_Specification/08_Subscriptions_Trials_and_Entitlements.md) |
+| Optional child-safe advertising policy | [09 Advertising Safeguards](../01_Product/Functional_Specification/09_Advertising_and_Monetization_Safeguards.md) |
+| Adult inbox, support, privacy and deletion | [10 Notifications and Privacy](../01_Product/Functional_Specification/10_Notifications_Support_and_Privacy.md) |
+| Editorial publishing and staff administration | [11 Admin/Editorial](../01_Product/Functional_Specification/11_Admin_Editorial_and_Content_Operations.md) |
+| Product release tests and traceability | [12 Acceptance and Release](../01_Product/Functional_Specification/12_Acceptance_Traceability_and_Release.md) |
+| Screen-by-screen design handoff | [13 Screen Inventory](../01_Product/Functional_Specification/13_Screen_Inventory_and_UX_Handoff.md) |
+| Critical state transitions and negative paths | [14 State Matrices](../01_Product/Functional_Specification/14_State_Matrices_and_Behavioral_Edge_Cases.md) |
+| Story rights, quality and safety standards | [15 Editorial Acceptance](../01_Product/Functional_Specification/15_Content_Quality_and_Editorial_Acceptance.md) |
+
+Every feature must have a traceable relationship among Product Bible concept, a PRD/FR ID, functional FS rules, acceptance scenarios, current API contracts and responsible independent microservice. The Product Bible should not duplicate every field or HTTP payload from the other documents.
+
+## 36. End-to-End Product Experience Promises
+
+### 36.1 Parent begins safely
+
+A new adult understands the app before providing account information, can create or sign in to a verified account, creates a child profile with only necessary personalization, and selects it without exposing billing or account management to a child. Invalid or missing verification must not create a false signed-in state.
+
+The child reaches Child Room with an approved calm palette, recognizable rabbit character, age-appropriate content and a predictable way to find a story. At every point the adult can return to a protected Parent Zone entry; a child cannot unlock it by opening a route directly.
+
+### 36.2 Child chooses and finishes a story
+
+A child chooses a curated story by cover, category or safe search. The detail explains the story without intrusive paywalls. Play starts only if the selected profile can access currently approved media. Narration is intelligible; text and illustrations follow audio time, including after pause, seek, OS interruption and resume.
+
+Progress belongs to that child only. When a second child takes the device, profile selection switches every private view atomically: personal favorites, resume, download labels and story history never transfer accidentally. Finishing a story cannot trigger a surprise purchase, a manipulative reward or an unreviewed advertisement.
+
+### 36.3 Parent manages what is suitable
+
+An adult opens Parent Zone through a real security challenge and can set content preferences, age/bedtime controls and device-related choices. The backend must honor restrictions across catalog results, direct story links, playback grants and new offline download grants. Settings that failed to save are visibly unsaved.
+
+A parent can review subscription status and choose a paid offer without involving the child in a purchase flow. The user sees what benefits exist, the actual store-disclosed price and renewal conditions, and a verified result only after provider confirmation.
+
+### 36.4 Family listens with unreliable connectivity
+
+A properly downloaded and verified story can be available offline when device/profile/entitlement policies permit it. A transfer interrupted halfway must not appear fully usable. Offline progress synchronizes when connectivity returns and duplicate/reordered events must not rewind a completed story or reveal a sibling's account state.
+
+The family receives calm, honest recovery messages. Network unavailability is distinct from an empty library; a temporary server error is not an excuse to grant unknown Premium access or leak private media.
+
+### 36.5 Content changes without endangering children
+
+Editors upload and review stories using restricted staff tools. No draft, unsafe file, unapproved narration or rights-expired work may become playable. If a story is withdrawn, child-facing search and new grants must honor the withdrawal, including on devices with cached covers.
+
+The parent can reach support and privacy controls from a protected adult space. Deletion/export follow an understandable and auditable process; no completion is claimed before the relevant owning services have actually finished.
+
+## 37. Universal Interaction and Recovery Promises
+
+The product must remain understandable and calm when the happy path fails. These promises apply across all major journeys:
+
+1. **Loading:** show a visible but quiet indication of progress; repeated taps must not create duplicate operations.
+2. **Empty content:** explain what is absent and offer a relevant safe next action, not a blank screen or irrelevant upsell.
+3. **Offline:** identify connectivity limits honestly; preserve eligible downloaded listening and queued progress where authorized.
+4. **Expired authority:** show the adult sign-in or Parent Zone proof when required; never silently reuse a previous account's privileges.
+5. **Blocked content:** explain availability neutrally without disclosing editorial reasons that could expose private staff data.
+6. **Unverified purchase:** show pending/incomplete; do not claim Premium before authoritative confirmation.
+7. **Sensitive destructive action:** adult confirmation describes affected profiles, devices, history and any documented reversal window.
+8. **Background/interruptions:** keep audio state consistent with OS controls, avoid sudden loudness, retain a recoverable checkpoint.
+9. **Accessibility:** child tasks do not depend on reading fluently, recognizing only a color, tiny touch targets or intensive animation.
+10. **Localization:** approved translations maintain consistent meaning for age, security, consent, subscriptions and pricing.
+11. **Privacy:** data displayed or sent to push, logs and analytics is minimal and never exposes private child records to a sibling/stranger.
+12. **Recovery:** support and meaningful retry are available without inventing server success.
+
+A release must test all applicable promises on iOS and Android, including at least one representative failure path per major screen.
+
+## 38. Product Policies Requiring Explicit Approval
+
+High-level Product Bible intentions are **not automatically permission to activate legal or commercial features**. The following are product-policy decisions that must be finalized in the [Decision Register](DECISION_REGISTER.md):
+
+| Product area | Intended direction | Approval before launch |
+|---|---|---|
+| Free catalog | Approximately 50 eligible stories | Licensing, editorial readiness and actual count [DEC-001] |
+| Monthly/annual Premium | Verified access to expanded catalog | Prices, currencies, tax and storefront offer IDs [DEC-002] |
+| Three-day trial | Trial option in product promise | Eligibility, geography, store rules and abuse prevention [DEC-003] |
+| Free-tier advertising | Noninterruptive, child-safe, after qualified sessions | Product/Legal/Security/store/vendor approval; disabled until then [DEC-004] |
+| Profile limits | Free limited; Premium multi-profile | Exact counts and no-data-loss downgrade [DEC-005] |
+| MVP phasing | Rich playback, sync, offline, illustrations and bedtime features | Explicit product sign-off for staged release [DEC-006] |
+| First markets/locales | Safe parent/child app in approved languages | Consent and privacy policy by country [DEC-007] |
+| Child data | Minimal profile attributes and retention | Age bands, deletion and export process [DEC-008] |
+| Hosting and continuity | Secure service-owned data and media | Region, cloud, recovery targets [DEC-009] |
+| Brand | Rabbit mascot, gentle colors and type | Final mascot name and licensed assets [DEC-010] |
+| Offline and playback | Authorized downloads and meaningful progress | Grant TTL, content revocation, completion policy [DEC-013/014] |
+| Parent routines | Protective challenges and calm listening limits | Time-limit semantics, verification and defaults [DEC-015] |
+| Notifications and support | Parent-oriented, private and controllable | Reminder cadence, mandatory notices and support process [DEC-016/017] |
+
+A gated feature may be designed, documented and tested behind a feature flag, but it cannot ship enabled until responsible stakeholders record explicit approval. Any product scope change must update this Bible, PRD, Functional Specification, accepted requirements and related tests.
+
+## 39. Product Completeness Test
+
+The product specification is sufficiently detailed to begin a feature when reviewers can answer, without guessing:
+
+- Who can access and change it; from which Child World/Parent Zone/admin screen?
+- What does the user see before, during and after the action?
+- Which inputs, restrictions, validation and confirmations apply?
+- How does it behave for another child profile, another adult account or an expired session?
+- What happens if the media, network, app store, database or another microservice is unavailable?
+- Is it safe and understandable to a pre-reader and accessible to parent devices?
+- What data, privileges and analytics are involved and how are they minimized?
+- What are the exact successful, invalid, interrupted, offline and repeated-request acceptance outcomes?
+- Which current API/event/data contracts and owning microservice fulfill the rule?
+- Is any remaining behavior an OPEN decision that would be unsafe to hardcode?
+
+A feature missing such answers is **not ready for implementation**, regardless of how many pages of text exist.

@@ -31,6 +31,9 @@ Product Bible controls overall product intent. The PRD defines scope and priorit
 | [10. Notifications, support and privacy](10_Notifications_Support_and_Privacy.md) | Inbox, push, email, support, data rights and deletion |
 | [11. Administration and content operations](11_Admin_Editorial_and_Content_Operations.md) | Editorial states, upload review, moderation, admin and audit |
 | [12. Acceptance and release traceability](12_Acceptance_Traceability_and_Release.md) | Acceptance matrix, cross-feature journeys and launch blockers |
+| [13. Screen inventory](13_Screen_Inventory_and_UX_Handoff.md) | Every Flutter and admin screen, inputs, actions and expected states |
+| [14. State matrices](14_State_Matrices_and_Behavioral_Edge_Cases.md) | Transition guards, remote failures, privacy and retries |
+| [15. Editorial quality](15_Content_Quality_and_Editorial_Acceptance.md) | Audio, timing, image rights and safe content release |
 
 ## Universal business invariants
 
