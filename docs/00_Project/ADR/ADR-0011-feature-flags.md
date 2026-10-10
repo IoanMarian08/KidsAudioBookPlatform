@@ -39,7 +39,7 @@ The backend owns:
 
 Mobile and administrative clients may receive already evaluated flags or non-sensitive configuration, but they must never independently grant access to premium, administrative, security-sensitive, or child-restricted capabilities.
 
-The initial implementation may be built inside the modular monolith. A dedicated external feature-management platform is not required for the MVP and may be introduced later through a compatible adapter if operational needs justify it.
+The initial implementation consists of independently deployed microservices as required by [ADR-0015](ADR-0015-microservices-from-first-release.md). Feature flags require consistent evaluation and safe propagation across the owning services; a dedicated external feature-management platform is optional and may be introduced later if needed.
 
 ## 3. Decision Scope
 

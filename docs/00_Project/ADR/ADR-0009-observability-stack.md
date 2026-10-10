@@ -9,7 +9,7 @@
 
 The platform requires production-grade visibility into API latency, playback failures, notification delivery, background jobs, RabbitMQ consumers, database health, cache behavior, mobile stability, and business-critical flows. Logs alone are insufficient. Observability must work consistently across local, test, staging, and production environments while avoiding unnecessary vendor lock-in and protecting sensitive user and child data.
 
-The platform begins as a modular monolith with workers but is expected to evolve toward independently deployable services. Correlation across synchronous requests, asynchronous events, scheduled jobs, and external providers must therefore be designed from the beginning.
+The platform begins with independently deployable microservices and service-owned workers as required by [ADR-0015](ADR-0015-microservices-from-first-release.md). Correlation across synchronous requests, asynchronous events, scheduled jobs, and external providers must therefore be designed from the beginning.
 
 ## Decision
 
