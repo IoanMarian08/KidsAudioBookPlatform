@@ -462,7 +462,7 @@ This document is reviewed:
 - after configuration-related incidents;
 - when adopting a new secret or configuration provider;
 - when adding environments or regions;
-- when service extraction changes ownership boundaries;
+- when an independently deployed service is added, split, merged or changes data ownership;
 - at least twice per year.
 
 ## 29. Related documents
